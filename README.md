@@ -61,6 +61,11 @@ portable-agent-layer/  [code · git · 460 files · 160 tests hidden]
 
 Raise the budget and the same call walks deeper into whichever subtree earns it.
 
+That example, and every measurement in this README, is
+[Portable Agent Layer](https://github.com/kovrichard/portable-agent-layer) — a 460 file
+TypeScript repository. It is the corpus the token estimator was fitted against, so treat
+the numbers as one repository's shape rather than a universal claim.
+
 ## Install
 
 Run it without installing anything:
@@ -121,7 +126,7 @@ repository's ignore rules, so `treefold src` hides what `git` hides.
 
 ## Why not `tree -L 2`
 
-Depth is the wrong knob. On the repository above, depth 2 costs 1,537 tokens and spends most of
+Depth is the wrong knob. On that repository, depth 2 costs 1,537 tokens and spends most of
 them printing 150 individual test filenames, because `test/` is flat. The directory that matters,
 `src/`, is four levels deep and shows up as four bare names.
 
@@ -178,6 +183,6 @@ that only has to be close enough to allocate against. Re-fit it if you change th
 
 ## Speed
 
-6 ms on a 460 file repository, measured over 20 runs. Comparable tools that build a symbol or
-call graph take 4 to 6 seconds on the same repository, because they parse every file.
+6 ms on the 460 file repository above, measured over 20 runs. Comparable tools that build a
+symbol or call graph take 4 to 6 seconds on the same repository, because they parse every file.
 `treefold` reads no file contents at all.
