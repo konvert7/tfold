@@ -63,9 +63,46 @@ Raise the budget and the same call walks deeper into whichever subtree earns it.
 
 ## Install
 
+Run it without installing anything:
+
+```bash
+bunx treefold .
+npx treefold .
+```
+
+Add it to a project so every agent working in that repo can rely on it:
+
+```bash
+bun add -d treefold
+```
+
+Or build from source:
+
 ```bash
 cargo install treefold
 ```
+
+The npm package is a launcher, not a reimplementation. The binary ships as a
+per-platform optional dependency, so there is no build step and no `postinstall`
+download — which is what makes it work under `bunx`, where lifecycle scripts are
+blocked by default. Prebuilt for `linux-x64`, `darwin-x64`, `darwin-arm64` and
+`win32-x64`; anywhere else, use `cargo install treefold`.
+
+## Tell your agent about it
+
+Once it is a dev dependency, two sentences in `AGENTS.md` (or `CLAUDE.md`) replace
+the structure section of your README:
+
+```markdown
+## Orienting in this repo
+
+Run `treefold .` for the structure, then `treefold <dir>` to drill into whatever
+it points at. Do not use `ls` or `find` to map the repo — treefold is faster and
+applies the repo's ignore rules.
+```
+
+The second sentence is the one that changes behaviour. Without it an agent makes
+one call and falls back to habit.
 
 ## Use
 

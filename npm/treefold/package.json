@@ -1,0 +1,39 @@
+{
+  "name": "treefold",
+  "version": "0.0.0",
+  "description": "A repository map that fits a token budget.",
+  "bin": {
+    "treefold": "bin/treefold.js"
+  },
+  "files": [
+    "bin/treefold.js",
+    "README.md"
+  ],
+  "keywords": [
+    "tree",
+    "repository",
+    "map",
+    "structure",
+    "agent",
+    "agentic",
+    "llm",
+    "tokens",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konvert7/treefold.git"
+  },
+  "homepage": "https://github.com/konvert7/treefold#readme",
+  "bugs": {
+    "url": "https://github.com/konvert7/treefold/issues"
+  },
+  "author": "Konvert7",
+  "optionalDependencies": {
+    "@konvert7/treefold-darwin-arm64": "0.0.0",
+    "@konvert7/treefold-darwin-x64": "0.0.0",
+    "@konvert7/treefold-linux-x64": "0.0.0",
+    "@konvert7/treefold-win32-x64": "0.0.0"
+  }
+}
