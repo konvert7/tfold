@@ -1,0 +1,217 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, without leading v"
+        required: true
+        type: string
+      publish-npm:
+        description: "Publish the native packages and the treefold shim to npm"
+        required: true
+        default: false
+        type: boolean
+      publish-release:
+        description: "Create or update the GitHub Release with the native archives"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  metadata:
+    name: metadata
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - name: Resolve release metadata
+        id: resolve
+        shell: bash
+        run: |
+          version="${{ inputs.version }}"
+          version="${version#v}"
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Version '$version' is not semver" >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Release $version"
+            echo ""
+            echo "- Publish npm: \`${{ inputs.publish-npm }}\`"
+            echo "- Publish GitHub Release: \`${{ inputs.publish-release }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: build (${{ matrix.package }})
+    needs: metadata
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            package: linux-x64
+            rust-target: x86_64-unknown-linux-gnu
+            binary: treefold
+          - os: macos-latest
+            package: darwin-arm64
+            rust-target: aarch64-apple-darwin
+            binary: treefold
+          - os: macos-15-intel
+            package: darwin-x64
+            rust-target: x86_64-apple-darwin
+            binary: treefold
+          - os: windows-latest
+            package: win32-x64
+            rust-target: x86_64-pc-windows-msvc
+            binary: treefold.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Setup Rust
+        run: rustup toolchain install stable --profile minimal
+
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.rust-target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.rust-target }}
+
+      - name: Test
+        run: cargo test --target ${{ matrix.rust-target }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.rust-target }}
+
+      - name: Stage and smoke the npm shim
+        shell: bash
+        run: |
+          node npm/stage.mjs \
+            --binary "target/${{ matrix.rust-target }}/release/${{ matrix.binary }}" \
+            --version "${{ needs.metadata.outputs.version }}"
+
+      - name: Collect binary
+        shell: bash
+        run: |
+          mkdir -p "dist/binaries/${{ matrix.package }}"
+          cp "target/${{ matrix.rust-target }}/release/${{ matrix.binary }}" \
+             "dist/binaries/${{ matrix.package }}/${{ matrix.binary }}"
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: treefold-${{ matrix.package }}
+          path: dist/binaries/${{ matrix.package }}/${{ matrix.binary }}
+          if-no-files-found: error
+
+  publish:
+    name: publish
+    needs: [metadata, build]
+    if: inputs.publish-npm || inputs.publish-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Download binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: treefold-*
+          path: dist/downloaded
+
+      - name: Reshape artifacts for release prep
+        shell: bash
+        run: |
+          mkdir -p dist/binaries
+          for dir in dist/downloaded/treefold-*; do
+            package="${dir#dist/downloaded/treefold-}"
+            mkdir -p "dist/binaries/$package"
+            cp "$dir"/* "dist/binaries/$package/"
+          done
+          find dist/binaries -type f -print
+
+      - name: Prepare release packages
+        run: |
+          node npm/prepare-release.mjs \
+            --version "${{ needs.metadata.outputs.version }}" \
+            --binaries dist/binaries \
+            --out dist/release
+
+      - name: Publish native packages
+        if: inputs.publish-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for dir in dist/release/native/*; do
+            npm publish "$dir" --access public --provenance
+          done
+
+      - name: Publish treefold
+        if: inputs.publish-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish dist/release/treefold --access public --provenance
+
+      - name: Package archives
+        if: inputs.publish-release
+        shell: bash
+        run: |
+          version="${{ needs.metadata.outputs.version }}"
+          mkdir -p dist/archives
+          for dir in dist/binaries/*; do
+            package="$(basename "$dir")"
+            staging="dist/archives/treefold-$version-$package"
+            mkdir -p "$staging"
+            cp "$dir"/* "$staging/"
+            cp README.md "$staging/README.md"
+            tar -czf "dist/archives/treefold-$version-$package.tar.gz" -C dist/archives "treefold-$version-$package"
+            rm -rf "$staging"
+          done
+          cd dist/archives
+          shasum -a 256 ./*.tar.gz > "treefold-$version-SHA256SUMS"
+
+      - name: Publish GitHub Release
+        if: inputs.publish-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag="${{ needs.metadata.outputs.tag }}"
+          version="${{ needs.metadata.outputs.version }}"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/archives/* --clobber
+          else
+            gh release create "$tag" dist/archives/* \
+              --title "treefold $version" \
+              --notes "Native binaries for treefold $version."
+          fi
