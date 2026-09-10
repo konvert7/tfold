@@ -1,0 +1,278 @@
+use std::collections::{HashMap, HashSet};
+
+use crate::classify::{is_deprioritized, is_entrypoint, is_manifest, is_test_path};
+use crate::estimate::line_tokens;
+
+pub type NodeId = usize;
+
+pub const ROOT: NodeId = 0;
+
+#[derive(Debug)]
+pub struct Node {
+    pub name: String,
+    pub depth: usize,
+    pub is_dir: bool,
+    pub children: Vec<NodeId>,
+    pub file_count: usize,
+    pub test_count: usize,
+    pub has_entrypoint: bool,
+    pub has_manifest: bool,
+    pub is_test: bool,
+    pub score: f64,
+}
+
+pub struct Tree {
+    pub nodes: Vec<Node>,
+    pub root_name: String,
+}
+
+pub struct Allocation {
+    pub expanded: HashSet<NodeId>,
+    pub tokens: f64,
+    pub over_budget: bool,
+}
+
+fn new_node(name: &str, depth: usize, is_dir: bool) -> Node {
+    Node {
+        name: name.to_string(),
+        depth,
+        is_dir,
+        children: Vec::new(),
+        file_count: 0,
+        test_count: 0,
+        has_entrypoint: false,
+        has_manifest: false,
+        is_test: false,
+        score: 0.0,
+    }
+}
+
+pub fn build_tree(files: &[String], root_name: &str) -> Tree {
+    let mut nodes = vec![new_node(root_name, 0, true)];
+    let mut index: HashMap<String, NodeId> = HashMap::new();
+    index.insert(String::new(), ROOT);
+
+    for file in files {
+        let segments: Vec<&str> = file.split('/').collect();
+        let mut parent = ROOT;
+        let mut prefix = String::new();
+        for (depth, segment) in segments.iter().enumerate() {
+            let is_leaf = depth == segments.len() - 1;
+            if !prefix.is_empty() {
+                prefix.push('/');
+            }
+            prefix.push_str(segment);
+            let id = match index.get(&prefix) {
+                Some(existing) => *existing,
+                None => {
+                    let id = nodes.len();
+                    nodes.push(new_node(segment, depth + 1, !is_leaf));
+                    nodes[parent].children.push(id);
+                    index.insert(prefix.clone(), id);
+                    id
+                }
+            };
+            parent = id;
+        }
+        nodes[parent].is_test = is_test_path(file);
+    }
+
+    sort_children(&mut nodes);
+    roll_up_counts(&mut nodes, ROOT);
+    score_all(&mut nodes);
+    Tree {
+        nodes,
+        root_name: root_name.to_string(),
+    }
+}
+
+fn sort_children(nodes: &mut [Node]) {
+    let keys: Vec<(bool, String, String)> = nodes
+        .iter()
+        .map(|node| (node.is_dir, node.name.to_lowercase(), node.name.clone()))
+        .collect();
+    for node in nodes.iter_mut() {
+        node.children.sort_by(|left, right| {
+            let a = &keys[*left];
+            let b = &keys[*right];
+            b.0.cmp(&a.0)
+                .then_with(|| a.1.cmp(&b.1))
+                .then_with(|| a.2.cmp(&b.2))
+        });
+    }
+}
+
+fn roll_up_counts(nodes: &mut Vec<Node>, id: NodeId) {
+    if !nodes[id].is_dir {
+        let is_test = nodes[id].is_test;
+        nodes[id].file_count = usize::from(!is_test);
+        nodes[id].test_count = usize::from(is_test);
+        return;
+    }
+    let children = nodes[id].children.clone();
+    for child_id in children {
+        roll_up_counts(nodes, child_id);
+        let (file_count, test_count, child_is_dir, child_name) = {
+            let child = &nodes[child_id];
+            (
+                child.file_count,
+                child.test_count,
+                child.is_dir,
+                child.name.clone(),
+            )
+        };
+        nodes[id].file_count += file_count;
+        nodes[id].test_count += test_count;
+        if !child_is_dir {
+            if is_entrypoint(&child_name) {
+                nodes[id].has_entrypoint = true;
+            }
+            if is_manifest(&child_name) {
+                nodes[id].has_manifest = true;
+            }
+        }
+    }
+}
+
+fn score_all(nodes: &mut [Node]) {
+    for index in 0..nodes.len() {
+        if !nodes[index].is_dir {
+            continue;
+        }
+        let node = &nodes[index];
+        let mut score =
+            4.0 / (1.0 + node.depth as f64) + 0.8 * ((1 + node.file_count) as f64).log2();
+        if node.has_entrypoint {
+            score += 2.0;
+        }
+        if node.has_manifest {
+            score += 1.5;
+        }
+        if is_deprioritized(&node.name) {
+            score -= 2.0;
+        }
+        if node.name.starts_with('.') {
+            score -= 2.5;
+        }
+        if node.file_count == 0 && node.test_count > 0 {
+            score -= 3.0;
+        }
+        nodes[index].score = score;
+    }
+}
+
+pub fn visible_children(tree: &Tree, id: NodeId, include_tests: bool) -> Vec<NodeId> {
+    tree.nodes[id]
+        .children
+        .iter()
+        .copied()
+        .filter(|child_id| {
+            let child = &tree.nodes[*child_id];
+            if include_tests {
+                true
+            } else if child.is_dir {
+                child.file_count > 0
+            } else {
+                !child.is_test
+            }
+        })
+        .collect()
+}
+
+pub fn collapsed_summary(node: &Node, include_tests: bool) -> String {
+    if !node.is_dir {
+        return String::new();
+    }
+    let mut parts: Vec<String> = Vec::new();
+    if node.file_count > 0 {
+        parts.push(plural(node.file_count, "file"));
+    }
+    if !include_tests && node.test_count > 0 {
+        parts.push(format!("{} hidden", plural(node.test_count, "test")));
+    }
+    if include_tests && node.test_count > 0 && node.file_count == 0 {
+        parts.push(plural(node.test_count, "test"));
+    }
+    if parts.is_empty() {
+        String::new()
+    } else {
+        format!("  ({})", parts.join(", "))
+    }
+}
+
+fn plural(count: usize, noun: &str) -> String {
+    let suffix = if count == 1 { "" } else { "s" };
+    format!("{count} {noun}{suffix}")
+}
+
+pub fn line_char_count(tree: &Tree, id: NodeId, expanded: bool, include_tests: bool) -> usize {
+    let node = &tree.nodes[id];
+    let indent = 4 * node.depth.saturating_sub(1);
+    let label_len = node.name.chars().count() + usize::from(node.is_dir);
+    let summary_len = if node.is_dir && !expanded {
+        collapsed_summary(node, include_tests).chars().count()
+    } else {
+        0
+    };
+    indent + 4 + label_len + summary_len
+}
+
+pub fn allocate(tree: &Tree, budget: f64, include_tests: bool) -> Allocation {
+    let mut expanded = HashSet::from([ROOT]);
+    let mut tokens = line_tokens(tree.root_name.chars().count() + 40);
+
+    for child_id in visible_children(tree, ROOT, include_tests) {
+        tokens += line_tokens(line_char_count(tree, child_id, false, include_tests));
+    }
+    let over_budget = tokens > budget;
+
+    while let Some((id, delta)) = best_candidate(tree, &expanded, budget - tokens, include_tests) {
+        expanded.insert(id);
+        tokens += delta;
+    }
+
+    Allocation {
+        expanded,
+        tokens,
+        over_budget,
+    }
+}
+
+fn best_candidate(
+    tree: &Tree,
+    expanded: &HashSet<NodeId>,
+    remaining: f64,
+    include_tests: bool,
+) -> Option<(NodeId, f64)> {
+    let mut best: Option<(NodeId, f64, f64)> = None;
+
+    for parent_id in expanded {
+        for id in visible_children(tree, *parent_id, include_tests) {
+            let node = &tree.nodes[id];
+            if !node.is_dir || expanded.contains(&id) {
+                continue;
+            }
+            let children = visible_children(tree, id, include_tests);
+            if children.is_empty() {
+                continue;
+            }
+            let delta = expansion_delta(tree, id, &children, include_tests);
+            if delta > remaining {
+                continue;
+            }
+            if best.is_none_or(|(_, _, score)| node.score > score) {
+                best = Some((id, delta, node.score));
+            }
+        }
+    }
+    best.map(|(id, delta, _)| (id, delta))
+}
+
+fn expansion_delta(tree: &Tree, id: NodeId, children: &[NodeId], include_tests: bool) -> f64 {
+    let mut delta = line_tokens(line_char_count(tree, id, true, include_tests));
+    delta -= line_tokens(line_char_count(tree, id, false, include_tests));
+    for child_id in children {
+        delta += line_tokens(line_char_count(tree, *child_id, false, include_tests));
+    }
+    delta
+}
