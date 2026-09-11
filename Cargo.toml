@@ -21,6 +21,7 @@ exclude = [
     ".npmrc",
     "commitlint.config.js",
     ".jscpd.json",
+    "knip.json",
     "biome.json",
     ".gitattributes",
     "/.agents",

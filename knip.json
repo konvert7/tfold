@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "tools/*.js",
+    "npm/*.mjs",
+    "!npm/native-packages.mjs",
+    "npm/tfold/bin/tfold.js",
+    ".agents/hooks/*.ts",
+    ".agents/scripts/*.ts",
+    ".opencode/plugins/*.ts"
+  ],
+  "project": ["**/*.{js,mjs,ts}"],
+  "tags": ["-lintignore"],
+  "ignoreDependencies": ["@semantic-release/github"]
+}

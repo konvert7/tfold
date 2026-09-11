@@ -26,6 +26,10 @@
           },
           {
             "type": "command",
+            "command": "bun .agents/hooks/knip.ts"
+          },
+          {
+            "type": "command",
             "command": "bun .agents/hooks/lf.ts"
           }
         ]
@@ -37,6 +41,7 @@
       "Bash(bun run check *)",
       "Bash(bun run check-write *)",
       "Bash(bun run jscpd *)",
+      "Bash(bun run knip *)",
       "Bash(bun run lf *)",
       "Bash(cargo fmt *)",
       "Bash(cargo check *)",

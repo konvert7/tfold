@@ -44,6 +44,8 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: jscpd
         run: bun run jscpd
+      - name: Knip
+        run: bun run knip
       - name: Line endings
         run: bun run lf
 

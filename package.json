@@ -7,6 +7,7 @@
     "release:dry-run": "semantic-release --dry-run --no-ci",
     "prepare": "bun .husky/install.mjs",
     "jscpd": "jscpd --no-tips",
+    "knip": "knip",
     "lf": "bun .agents/scripts/check-lf.ts",
     "check": "biome check",
     "check-write": "biome check --write"
@@ -20,6 +21,7 @@
     "@semantic-release/github": "^12.0.6",
     "husky": "^9.1.7",
     "jscpd": "^5.2.0",
+    "knip": "^6.35.1",
     "semantic-release": "^25.0.3"
   }
 }

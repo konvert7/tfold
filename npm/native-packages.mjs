@@ -45,7 +45,7 @@ export function shimManifestPath() {
   return join(npmRoot, "tfold", "package.json");
 }
 
-export function readManifest(path) {
+function readManifest(path) {
   try {
     return JSON.parse(readFileSync(path, "utf-8"));
   } catch (error) {

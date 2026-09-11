@@ -18,6 +18,9 @@
         "command": "bun .agents/hooks/jscpd.ts --cursor"
       },
       {
+        "command": "bun .agents/hooks/knip.ts --cursor"
+      },
+      {
         "command": "bun .agents/hooks/lf.ts --cursor"
       }
     ]
