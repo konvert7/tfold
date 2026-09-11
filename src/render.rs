@@ -1,6 +1,6 @@
 use crate::classify::Kind;
 use crate::collect::Source;
-use crate::tree::{Allocation, NodeId, ROOT, Tree, collapsed_summary, visible_children};
+use crate::tree::{Allocation, NodeId, ROOT, Tree, dir_summary, visible_children};
 
 pub struct RenderOptions {
     pub kind: Kind,
@@ -58,8 +58,8 @@ fn append_children(
         } else {
             child.name.clone()
         };
-        let summary = if child.is_dir && !expanded {
-            collapsed_summary(child, include_tests)
+        let summary = if child.is_dir {
+            dir_summary(child, include_tests)
         } else {
             String::new()
         };

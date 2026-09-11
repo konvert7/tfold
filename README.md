@@ -8,7 +8,7 @@ directory, spending its budget where the code actually is, and it never guesses 
 ```
 $ tfold . --budget 400
 
-portable-agent-layer/  [code · git · 460 files · 160 tests hidden]
+portable-agent-layer/  [code · git · 460 files · 159 tests hidden]
 ├── .agents/  (18 files)
 ├── .claude/  (7 files)
 ├── .codex/  (1 file)
@@ -17,15 +17,14 @@ portable-agent-layer/  [code · git · 460 files · 160 tests hidden]
 ├── .husky/  (4 files)
 ├── .opencode/  (1 file)
 ├── assets/  (177 files)
-├── docs/
+├── docs/  (1 file)
 │   └── plans/  (1 file)
 ├── eval/  (27 files)
-├── scripts/
-│   └── build-skill-tools.ts
-├── src/
+├── scripts/  (1 file)
+├── src/  (192 files)
 │   ├── cli/  (12 files)
 │   ├── hooks/  (93 files)
-│   ├── targets/
+│   ├── targets/  (12 files)
 │   │   ├── claude/  (2 files)
 │   │   ├── codex/  (2 files)
 │   │   ├── copilot/  (2 files)
@@ -56,7 +55,7 @@ portable-agent-layer/  [code · git · 460 files · 160 tests hidden]
 ├── stryker.config.mjs
 └── tsconfig.json
 
-~398 tokens
+~399 tokens
 ```
 
 Raise the budget and the same call walks deeper into whichever subtree earns it.
@@ -114,11 +113,11 @@ one call and falls back to habit.
 Start wide, then drill into whatever the first call points at:
 
 ```bash
-tfold .            # 789 tokens, 6 ms
-tfold src/hooks    # 534 tokens, 2 ms
+tfold .            # 795 tokens, 6 ms
+tfold src/hooks    # 649 tokens, 2 ms
 ```
 
-Two calls, 1,323 tokens, 8 ms. That replaces the `ls`, `find` and `cat` loop an agent otherwise
+Two calls, 1,444 tokens, 8 ms. That replaces the `ls`, `find` and `cat` loop an agent otherwise
 runs to answer the same question.
 
 Any subdirectory works as a root. Pointed inside a git repository, `tfold` still applies the
@@ -131,7 +130,8 @@ them printing 150 individual test filenames, because `test/` is flat. The direct
 `src/`, is four levels deep and shows up as four bare names.
 
 `tfold` takes a budget instead and decides depth per subtree. Flat directories collapse to a
-count. Deep ones get walked.
+count. Deep ones get walked, and still carry the total, so `src/  (192 files)` tells you the
+weight of a subtree whether or not you can see inside it.
 
 ## It does not guess
 
@@ -139,7 +139,8 @@ Every line is a fact about the filesystem. `tfold` never labels a directory with
 the code does, because that is where similar tools go wrong: a directory called `hooks` is not
 necessarily React, and a confident wrong label costs more than no label.
 
-The one rule that keeps it honest: a directory is expanded completely or collapsed to a count.
+The one rule that keeps it honest: a directory is expanded completely or collapsed, and either
+way it reports how many files are under it.
 Breadth is never truncated. Showing 12 of 160 files reads like the whole directory and is a lie by
 omission. `test/  (160 tests hidden)` cannot mislead anyone.
 

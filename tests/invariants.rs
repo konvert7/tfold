@@ -220,3 +220,51 @@ fn no_exclude_leaves_the_map_untouched() {
         "passing an empty exclude list changed the output"
     );
 }
+
+#[test]
+fn an_expanded_directory_still_reports_its_recursive_total() {
+    let fixture = Fixture::new("expanded-total");
+    fixture
+        .file("src/main.rs", "")
+        .file("src/deep/alpha.rs", "")
+        .file("src/deep/beta.rs", "");
+
+    let map = fixture.map(500.0, false);
+    assert!(
+        map.contains("main.rs"),
+        "src/ was not expanded, so this test proves nothing:\n{map}"
+    );
+    let line = map
+        .lines()
+        .find(|line| line.contains("src/"))
+        .expect("src directory missing");
+    assert!(
+        line.contains("(3 files)"),
+        "expanded directory dropped its recursive total: {line}"
+    );
+}
+
+#[test]
+fn the_token_footer_accounts_for_every_printed_line() {
+    let fixture = Fixture::new("footer-honest");
+    for index in 0..40 {
+        fixture.file(&format!("area{}/nested/file{index:02}.rs", index % 5), "");
+    }
+
+    let map = fixture.map(900.0, false);
+    let lines: Vec<&str> = map.lines().collect();
+    let claimed: f64 = lines
+        .last()
+        .and_then(|line| line.trim_start_matches('~').split(' ').next())
+        .and_then(|number| number.parse().ok())
+        .expect("token footer missing");
+    let printed: f64 = lines[1..lines.len() - 2]
+        .iter()
+        .map(|line| tfold::estimate::line_tokens(line.chars().count()))
+        .sum();
+
+    assert!(
+        claimed >= printed,
+        "footer under-reports: claimed {claimed}, body alone is {printed}\n{map}"
+    );
+}

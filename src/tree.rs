@@ -178,7 +178,7 @@ pub fn visible_children(tree: &Tree, id: NodeId, include_tests: bool) -> Vec<Nod
         .collect()
 }
 
-pub fn collapsed_summary(node: &Node, include_tests: bool) -> String {
+pub fn dir_summary(node: &Node, include_tests: bool) -> String {
     if !node.is_dir {
         return String::new();
     }
@@ -204,12 +204,12 @@ fn plural(count: usize, noun: &str) -> String {
     format!("{count} {noun}{suffix}")
 }
 
-pub fn line_char_count(tree: &Tree, id: NodeId, expanded: bool, include_tests: bool) -> usize {
+pub fn line_char_count(tree: &Tree, id: NodeId, include_tests: bool) -> usize {
     let node = &tree.nodes[id];
     let indent = 4 * node.depth.saturating_sub(1);
     let label_len = node.name.chars().count() + usize::from(node.is_dir);
-    let summary_len = if node.is_dir && !expanded {
-        collapsed_summary(node, include_tests).chars().count()
+    let summary_len = if node.is_dir {
+        dir_summary(node, include_tests).chars().count()
     } else {
         0
     };
@@ -221,7 +221,7 @@ pub fn allocate(tree: &Tree, budget: f64, include_tests: bool) -> Allocation {
     let mut tokens = line_tokens(tree.root_name.chars().count() + 40);
 
     for child_id in visible_children(tree, ROOT, include_tests) {
-        tokens += line_tokens(line_char_count(tree, child_id, false, include_tests));
+        tokens += line_tokens(line_char_count(tree, child_id, include_tests));
     }
     let over_budget = tokens > budget;
 
@@ -255,7 +255,7 @@ fn best_candidate(
             if children.is_empty() {
                 continue;
             }
-            let delta = expansion_delta(tree, id, &children, include_tests);
+            let delta = expansion_delta(tree, &children, include_tests);
             if delta > remaining {
                 continue;
             }
@@ -267,11 +267,9 @@ fn best_candidate(
     best.map(|(id, delta, _)| (id, delta))
 }
 
-fn expansion_delta(tree: &Tree, id: NodeId, children: &[NodeId], include_tests: bool) -> f64 {
-    let mut delta = line_tokens(line_char_count(tree, id, true, include_tests));
-    delta -= line_tokens(line_char_count(tree, id, false, include_tests));
-    for child_id in children {
-        delta += line_tokens(line_char_count(tree, *child_id, false, include_tests));
-    }
-    delta
+fn expansion_delta(tree: &Tree, children: &[NodeId], include_tests: bool) -> f64 {
+    children
+        .iter()
+        .map(|child_id| line_tokens(line_char_count(tree, *child_id, include_tests)))
+        .sum()
 }
