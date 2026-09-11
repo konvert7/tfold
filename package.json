@@ -6,7 +6,8 @@
   "scripts": {
     "release:dry-run": "semantic-release --dry-run --no-ci",
     "prepare": "bun .husky/install.mjs",
-    "jscpd": "jscpd --no-tips"
+    "jscpd": "jscpd --no-tips",
+    "lf": "bun .agents/scripts/check-lf.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.3",

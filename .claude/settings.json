@@ -19,6 +19,10 @@
           {
             "type": "command",
             "command": "bun .agents/hooks/jscpd.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/lf.ts"
           }
         ]
       }
@@ -27,6 +31,7 @@
   "permissions": {
     "allow": [
       "Bash(bun run jscpd *)",
+      "Bash(bun run lf *)",
       "Bash(cargo fmt *)",
       "Bash(cargo check *)",
       "Bash(cargo clippy *)",

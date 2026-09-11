@@ -5,3 +5,4 @@ cargo fmt --check
 cargo check --all-targets
 cargo clippy --all-targets -- -D warnings
 bun run jscpd
+bun run lf
