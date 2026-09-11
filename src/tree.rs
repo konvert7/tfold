@@ -18,6 +18,8 @@ pub struct Node {
     pub has_entrypoint: bool,
     pub has_manifest: bool,
     pub is_test: bool,
+    pub is_changed: bool,
+    pub changed_count: usize,
     pub score: f64,
 }
 
@@ -43,11 +45,13 @@ fn new_node(name: &str, depth: usize, is_dir: bool) -> Node {
         has_entrypoint: false,
         has_manifest: false,
         is_test: false,
+        is_changed: false,
+        changed_count: 0,
         score: 0.0,
     }
 }
 
-pub fn build_tree(files: &[String], root_name: &str) -> Tree {
+pub fn build_tree(files: &[String], root_name: &str, changed: &HashSet<String>) -> Tree {
     let mut nodes = vec![new_node(root_name, 0, true)];
     let mut index: HashMap<String, NodeId> = HashMap::new();
     index.insert(String::new(), ROOT);
@@ -75,6 +79,7 @@ pub fn build_tree(files: &[String], root_name: &str) -> Tree {
             parent = id;
         }
         nodes[parent].is_test = is_test_path(file);
+        nodes[parent].is_changed = changed.contains(file);
     }
 
     sort_children(&mut nodes);
@@ -107,22 +112,25 @@ fn roll_up_counts(nodes: &mut Vec<Node>, id: NodeId) {
         let is_test = nodes[id].is_test;
         nodes[id].file_count = usize::from(!is_test);
         nodes[id].test_count = usize::from(is_test);
+        nodes[id].changed_count = usize::from(nodes[id].is_changed);
         return;
     }
     let children = nodes[id].children.clone();
     for child_id in children {
         roll_up_counts(nodes, child_id);
-        let (file_count, test_count, child_is_dir, child_name) = {
+        let (file_count, test_count, changed_count, child_is_dir, child_name) = {
             let child = &nodes[child_id];
             (
                 child.file_count,
                 child.test_count,
+                child.changed_count,
                 child.is_dir,
                 child.name.clone(),
             )
         };
         nodes[id].file_count += file_count;
         nodes[id].test_count += test_count;
+        nodes[id].changed_count += changed_count;
         if !child_is_dir {
             if is_entrypoint(&child_name) {
                 nodes[id].has_entrypoint = true;
@@ -156,6 +164,9 @@ fn score_all(nodes: &mut [Node]) {
         if node.file_count == 0 && node.test_count > 0 {
             score -= 3.0;
         }
+        if node.changed_count > 0 {
+            score += 1.5 * ((1 + node.changed_count) as f64).log2();
+        }
         node.score = score;
     }
 }
@@ -178,9 +189,15 @@ pub fn visible_children(tree: &Tree, id: NodeId, include_tests: bool) -> Vec<Nod
         .collect()
 }
 
+pub const CHANGED_MARK: &str = "  *";
+
 pub fn dir_summary(node: &Node, include_tests: bool) -> String {
     if !node.is_dir {
-        return String::new();
+        return if node.is_changed {
+            CHANGED_MARK.to_string()
+        } else {
+            String::new()
+        };
     }
     let mut parts: Vec<String> = Vec::new();
     if node.file_count > 0 {
@@ -191,6 +208,9 @@ pub fn dir_summary(node: &Node, include_tests: bool) -> String {
     }
     if include_tests && node.test_count > 0 && node.file_count == 0 {
         parts.push(plural(node.test_count, "test"));
+    }
+    if node.changed_count > 0 {
+        parts.push(format!("{} changed", node.changed_count));
     }
     if parts.is_empty() {
         String::new()
@@ -208,11 +228,7 @@ pub fn line_char_count(tree: &Tree, id: NodeId, include_tests: bool) -> usize {
     let node = &tree.nodes[id];
     let indent = 4 * node.depth.saturating_sub(1);
     let label_len = node.name.chars().count() + usize::from(node.is_dir);
-    let summary_len = if node.is_dir {
-        dir_summary(node, include_tests).chars().count()
-    } else {
-        0
-    };
+    let summary_len = dir_summary(node, include_tests).chars().count();
     indent + 4 + label_len + summary_len
 }
 

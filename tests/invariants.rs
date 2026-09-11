@@ -26,7 +26,30 @@ impl Fixture {
 
     fn map_excluding(&self, budget: f64, include_tests: bool, excludes: &[&str]) -> String {
         let excludes: Vec<String> = excludes.iter().map(|glob| glob.to_string()).collect();
-        tfold::run(&self.root, budget, include_tests, &excludes)
+        tfold::run(&self.root, budget, include_tests, &excludes, None).expect("map")
+    }
+
+    fn map_since(&self, reference: &str) -> Result<String, String> {
+        tfold::run(&self.root, 500.0, false, &[], Some(reference))
+    }
+
+    fn git(&self, args: &[&str]) -> &Self {
+        let status = std::process::Command::new("git")
+            .arg("-C")
+            .arg(&self.root)
+            .args(args)
+            .env("GIT_AUTHOR_NAME", "tfold")
+            .env("GIT_AUTHOR_EMAIL", "tfold@example.com")
+            .env("GIT_COMMITTER_NAME", "tfold")
+            .env("GIT_COMMITTER_EMAIL", "tfold@example.com")
+            .output()
+            .expect("run git");
+        assert!(
+            status.status.success(),
+            "git {args:?} failed: {}",
+            String::from_utf8_lossy(&status.stderr)
+        );
+        self
     }
 }
 
@@ -97,7 +120,7 @@ fn a_subdirectory_still_honours_its_parents_gitignore() {
         .file("src/main.rs", "")
         .file("src/generated/schema.rs", "");
 
-    let map = tfold::run(&fixture.root.join("src"), 500.0, false, &[]);
+    let map = tfold::run(&fixture.root.join("src"), 500.0, false, &[], None).expect("map");
     assert!(map.contains("main.rs"), "sibling dropped:\n{map}");
     assert!(
         !map.contains("schema.rs"),
@@ -266,5 +289,130 @@ fn the_token_footer_accounts_for_every_printed_line() {
     assert!(
         claimed >= printed,
         "footer under-reports: claimed {claimed}, body alone is {printed}\n{map}"
+    );
+}
+
+#[test]
+fn since_marks_changed_files_and_counts_them_in_the_header() {
+    let fixture = Fixture::new("since-marks");
+    fixture
+        .file("src/stable.rs", "")
+        .file("src/touched.rs", "")
+        .git(&["init", "-q", "-b", "main"])
+        .git(&["add", "-A"])
+        .git(&["commit", "-qm", "init"]);
+    fixture.file("src/touched.rs", "changed\n");
+
+    let map = fixture.map_since("main").expect("since map");
+    assert!(
+        map.contains("1 changed since main"),
+        "header did not report the change set:\n{map}"
+    );
+    let line = map
+        .lines()
+        .find(|line| line.contains("src/"))
+        .expect("src missing");
+    assert!(
+        line.contains("1 changed"),
+        "directory did not report its changed count: {line}"
+    );
+}
+
+#[test]
+fn since_is_ignored_rather_than_fatal_outside_a_git_repository() {
+    let fixture = Fixture::new("since-nogit");
+    fixture.file("src/main.rs", "").file("README.md", "");
+
+    let map = fixture
+        .map_since("main")
+        .expect("--since must not fail without git");
+    assert!(
+        map.contains("--since needs git, ignored"),
+        "the ignored flag was not reported:\n{map}"
+    );
+    assert!(
+        map.contains("main.rs") && map.contains("README.md"),
+        "the map was not produced in full:\n{map}"
+    );
+    assert!(
+        !map.contains("changed"),
+        "a change count appeared without git:\n{map}"
+    );
+}
+
+#[test]
+fn an_unknown_revision_is_rejected_before_a_map_is_produced() {
+    let fixture = Fixture::new("since-badref");
+    fixture
+        .file("src/main.rs", "")
+        .git(&["init", "-q", "-b", "main"])
+        .git(&["add", "-A"])
+        .git(&["commit", "-qm", "init"]);
+
+    let error = fixture
+        .map_since("no-such-ref")
+        .expect_err("an unknown revision must be rejected");
+    assert!(
+        error.contains("no-such-ref"),
+        "the error did not name the revision: {error}"
+    );
+}
+
+#[test]
+fn since_ranks_a_changed_subtree_above_a_larger_untouched_one() {
+    let fixture = Fixture::new("since-ranks");
+    for index in 0..30 {
+        fixture.file(&format!("bulk/file{index:02}.rs"), "");
+    }
+    for index in 0..25 {
+        fixture.file(&format!("quiet/unit{index:02}.rs"), "");
+    }
+    fixture
+        .git(&["init", "-q", "-b", "main"])
+        .git(&["add", "-A"])
+        .git(&["commit", "-qm", "init"]);
+    fixture.file("quiet/unit00.rs", "changed\n");
+
+    let budget = 300.0;
+    let plain = tfold::run(&fixture.root, budget, false, &[], None).expect("plain map");
+    assert!(
+        plain.contains("file00.rs") && !plain.contains("unit00.rs"),
+        "the budget must fit exactly one subtree, and bulk/ must win it without --since:\n{plain}"
+    );
+
+    let map = tfold::run(&fixture.root, budget, false, &[], Some("main")).expect("since map");
+    assert!(
+        map.contains("unit00.rs") && !map.contains("file00.rs"),
+        "--since did not move the budget to the changed subtree:\n{map}"
+    );
+}
+
+#[test]
+fn a_changed_file_is_marked_where_it_sits() {
+    let fixture = Fixture::new("since-file-mark");
+    fixture
+        .file("src/stable.rs", "")
+        .file("src/touched.rs", "")
+        .git(&["init", "-q", "-b", "main"])
+        .git(&["add", "-A"])
+        .git(&["commit", "-qm", "init"]);
+    fixture.file("src/touched.rs", "changed\n");
+
+    let map = fixture.map_since("main").expect("since map");
+    let touched = map
+        .lines()
+        .find(|line| line.contains("touched.rs"))
+        .expect("touched.rs missing");
+    let stable = map
+        .lines()
+        .find(|line| line.contains("stable.rs"))
+        .expect("stable.rs missing");
+    assert!(
+        touched.trim_end().ends_with('*'),
+        "changed file was not marked: {touched}"
+    );
+    assert!(
+        !stable.trim_end().ends_with('*'),
+        "unchanged file was marked: {stable}"
     );
 }

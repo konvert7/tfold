@@ -1,3 +1,4 @@
+use crate::Since;
 use crate::classify::Kind;
 use crate::collect::Source;
 use crate::tree::{Allocation, NodeId, ROOT, Tree, dir_summary, visible_children};
@@ -6,6 +7,7 @@ pub struct RenderOptions {
     pub kind: Kind,
     pub source: Source,
     pub include_tests: bool,
+    pub since: Since,
 }
 
 pub fn render(tree: &Tree, allocation: &Allocation, options: &RenderOptions) -> Vec<String> {
@@ -35,6 +37,13 @@ fn header(tree: &Tree, options: &RenderOptions) -> String {
             format!("{} tests hidden", root.test_count)
         });
     }
+    match &options.since {
+        Since::Off => {}
+        Since::Changes(reference, _) => {
+            facts.push(format!("{} changed since {reference}", root.changed_count))
+        }
+        Since::Unavailable => facts.push("--since needs git, ignored".to_string()),
+    }
     format!("{}/  [{}]", tree.root_name, facts.join(" · "))
 }
 
@@ -58,11 +67,7 @@ fn append_children(
         } else {
             child.name.clone()
         };
-        let summary = if child.is_dir {
-            dir_summary(child, include_tests)
-        } else {
-            String::new()
-        };
+        let summary = dir_summary(child, include_tests);
         let branch = if is_last { "└── " } else { "├── " };
         lines.push(format!("{prefix}{branch}{label}{summary}"));
 

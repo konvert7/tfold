@@ -151,6 +151,7 @@ omission. `test/  (160 tests hidden)` cannot mislead anyone.
 | `--budget <n>` | `800` | Token budget for the output. |
 | `--include-tests` | off | Show test files instead of collapsing them to a count. |
 | `--exclude <glob>` | none | Drop paths matching a glob. Repeatable. |
+| `--since <ref>` | none | Mark what changed since a git revision and spend the budget there. |
 
 Tests are excluded by default and always counted in the header, so you can see that they exist
 without paying for their names.
@@ -164,6 +165,61 @@ tfold . --exclude 'docs/**' --exclude vendor
 
 An unparseable glob is rejected before any work happens, so a typo costs you an error rather
 than a map that silently excludes nothing.
+
+## Picking up a branch
+
+`--since` compares against the merge base with a revision and reshapes the map around the result.
+Changed files are marked, directories carry a count, and the ranking pulls the changed subtrees
+into the budget ahead of larger untouched ones.
+
+```
+$ tfold . --since HEAD~2 --budget 300
+
+tfold/  [code · git · 52 files · 1 tests hidden · 11 changed since HEAD~2]
+├── .agents/  (9 files)
+│   ├── hooks/  (8 files)
+│   └── scripts/  (1 file)
+│       └── check-lf.ts
+├── .claude/  (1 file)
+├── .codex/  (1 file)
+├── .cursor/  (1 file)
+├── .github/  (1 file)
+├── .husky/  (3 files)
+├── .opencode/  (1 file)
+├── npm/  (10 files, 1 changed)
+├── src/  (7 files, 5 changed)
+│   ├── classify.rs
+│   ├── collect.rs  *
+│   ├── estimate.rs
+│   ├── lib.rs  *
+│   ├── main.rs  *
+│   ├── render.rs  *
+│   └── tree.rs  *
+├── tools/  (4 files)
+├── .gitattributes
+├── .gitignore
+├── .jscpd.json
+├── .npmrc
+├── .releaserc.json
+├── biome.json
+├── bun.lock
+├── Cargo.lock  *
+├── Cargo.toml  *
+├── CHANGELOG.md  *
+├── commitlint.config.js
+├── knip.json
+├── package.json
+└── README.md  *
+
+~294 tokens
+```
+
+It counts uncommitted edits and untracked files too, so it answers "where am I" rather than only
+"what did I commit".
+
+An unknown revision is an error. A directory that is not a git repository is not: the map comes out
+in full and the header says `--since needs git, ignored`, because a map with no marks would
+otherwise read as a branch that changed nothing.
 
 ## What it expands first
 

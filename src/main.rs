@@ -23,17 +23,25 @@ struct Args {
     /// Exclude paths matching a glob, repeatable
     #[arg(long, value_name = "GLOB", value_parser = tfold::collect::validate_exclude)]
     exclude: Vec<String>,
+
+    /// Mark and rank up what changed since a git revision
+    #[arg(long, value_name = "REF")]
+    since: Option<String>,
 }
 
 fn main() {
     let args = Args::parse();
-    println!(
-        "{}",
-        tfold::run(
-            &args.root,
-            args.budget as f64,
-            args.include_tests,
-            &args.exclude
-        )
-    );
+    match tfold::run(
+        &args.root,
+        args.budget as f64,
+        args.include_tests,
+        &args.exclude,
+        args.since.as_deref(),
+    ) {
+        Ok(map) => println!("{map}"),
+        Err(error) => {
+            eprintln!("tfold: {error}");
+            std::process::exit(2);
+        }
+    }
 }

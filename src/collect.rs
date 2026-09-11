@@ -156,3 +156,44 @@ fn is_skipped_dir(entry: &ignore::DirEntry, trust_ignore_files: bool) -> bool {
     }
     !trust_ignore_files && NEVER_INTERESTING.contains(&name.as_ref())
 }
+
+fn git_output(root: &Path, args: &[&str]) -> Result<String, String> {
+    let output = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(args)
+        .output()
+        .map_err(|error| format!("could not run git: {error}"))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+fn comparison_point(root: &Path, reference: &str) -> String {
+    git_output(root, &["merge-base", reference, "HEAD"])
+        .map(|base| base.trim().to_string())
+        .ok()
+        .filter(|base| !base.is_empty())
+        .unwrap_or_else(|| reference.to_string())
+}
+
+pub fn changed_since(root: &Path, reference: &str) -> Result<Vec<String>, String> {
+    git_output(root, &["rev-parse", "--verify", "--quiet", reference])
+        .map_err(|_| format!("unknown git revision: {reference}"))?;
+
+    let base = comparison_point(root, reference);
+    let mut paths: Vec<String> = git_output(root, &["diff", "--name-only", "--relative", &base])?
+        .lines()
+        .map(str::to_string)
+        .collect();
+    paths.extend(
+        git_output(root, &["ls-files", "--others", "--exclude-standard"])?
+            .lines()
+            .map(str::to_string),
+    );
+    paths.retain(|path| !path.is_empty());
+    paths.sort();
+    paths.dedup();
+    Ok(paths)
+}
