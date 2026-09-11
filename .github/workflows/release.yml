@@ -34,6 +34,8 @@ jobs:
           key: lint
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Check (biome)
+        run: bun run check
       - name: Rust format
         run: cargo fmt --check
       - name: Rust check

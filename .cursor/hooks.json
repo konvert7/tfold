@@ -3,6 +3,9 @@
   "hooks": {
     "stop": [
       {
+        "command": "bun .agents/hooks/check.ts"
+      },
+      {
         "command": "bun .agents/hooks/rust-format.ts --cursor"
       },
       {

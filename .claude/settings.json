@@ -6,6 +6,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bun .agents/hooks/check.ts"
+          },
+          {
+            "type": "command",
             "command": "bun .agents/hooks/rust-format.ts"
           },
           {
@@ -30,6 +34,8 @@
   },
   "permissions": {
     "allow": [
+      "Bash(bun run check *)",
+      "Bash(bun run check-write *)",
       "Bash(bun run jscpd *)",
       "Bash(bun run lf *)",
       "Bash(cargo fmt *)",

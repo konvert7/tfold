@@ -7,9 +7,12 @@
     "release:dry-run": "semantic-release --dry-run --no-ci",
     "prepare": "bun .husky/install.mjs",
     "jscpd": "jscpd --no-tips",
-    "lf": "bun .agents/scripts/check-lf.ts"
+    "lf": "bun .agents/scripts/check-lf.ts",
+    "check": "biome check",
+    "check-write": "biome check --write"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.13",
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@semantic-release/changelog": "^6.0.3",
