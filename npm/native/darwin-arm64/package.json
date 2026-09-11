@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/konvert7/treefold.git"
+    "url": "git+https://github.com/konvert7/tfold.git"
   },
   "os": [
     "darwin"
