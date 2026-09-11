@@ -10,7 +10,17 @@ license = "MIT"
 readme = "README.md"
 keywords = ["tree", "repository", "agent", "llm", "cli"]
 categories = ["command-line-utilities", "development-tools"]
-exclude = ["/npm", "/.github"]
+exclude = [
+    "/npm",
+    "/.github",
+    "/tools",
+    "/node_modules",
+    "package.json",
+    "bun.lock",
+    ".releaserc.json",
+    ".npmrc",
+    "commitlint.config.js",
+]
 
 [dependencies]
 clap = { version = "4.6.6", features = ["derive"] }
