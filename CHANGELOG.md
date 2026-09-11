@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/konvert7/tfold/compare/v0.2.0...v0.2.1) (2026-09-11)
+
+
+### Bug Fixes
+
+* show count of children for parents too ([3a0f8d6](https://github.com/konvert7/tfold/commit/3a0f8d67ea15651df2a9803b466fb355b740acf3))
+
 # [0.2.0](https://github.com/konvert7/tfold/compare/v0.1.3...v0.2.0) (2026-09-11)
 
 
