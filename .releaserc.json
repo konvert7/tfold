@@ -1,0 +1,36 @@
+{
+  "branches": [
+    "main"
+  ],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/changelog",
+    "./tools/semantic-release-cargo.js",
+    "./tools/semantic-release-npm.js",
+    "./tools/semantic-release-archives.js",
+    [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "Cargo.toml",
+          "Cargo.lock",
+          "CHANGELOG.md"
+        ]
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "dist/archives/*.tar.gz"
+          },
+          {
+            "path": "dist/archives/*-SHA256SUMS"
+          }
+        ]
+      }
+    ]
+  ]
+}
