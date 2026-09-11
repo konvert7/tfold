@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Release tooling for tfold. Not published.",
   "scripts": {
-    "release:dry-run": "semantic-release --dry-run --no-ci"
+    "release:dry-run": "semantic-release --dry-run --no-ci",
+    "prepare": "bun .husky/install.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.3",
@@ -12,6 +13,7 @@
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.6",
+    "husky": "^9.1.7",
     "semantic-release": "^25.0.3"
   }
 }

@@ -20,6 +20,12 @@ exclude = [
     ".releaserc.json",
     ".npmrc",
     "commitlint.config.js",
+    "/.agents",
+    "/.claude",
+    "/.codex",
+    "/.cursor",
+    "/.opencode",
+    "/.husky",
 ]
 
 [dependencies]

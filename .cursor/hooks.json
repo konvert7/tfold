@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      { "command": "bun .agents/hooks/rust-format.ts --cursor" },
+      { "command": "bun .agents/hooks/rust-check.ts --cursor" },
+      { "command": "bun .agents/hooks/rust-clippy.ts --cursor" }
+    ]
+  }
+}

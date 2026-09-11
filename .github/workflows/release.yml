@@ -16,6 +16,25 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Rust
+        run: rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: lint
+      - name: Rust format
+        run: cargo fmt --check
+      - name: Rust check
+        run: cargo check --all-targets
+      - name: Rust clippy
+        run: cargo clippy --all-targets -- -D warnings
+
   build:
     name: build (${{ matrix.package }})
     runs-on: ${{ matrix.os }}
@@ -79,7 +98,7 @@ jobs:
 
   release:
     name: release
-    needs: build
+    needs: [lint, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
