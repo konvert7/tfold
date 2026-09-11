@@ -8,7 +8,7 @@ use std::path::Path;
 
 use classify::classify_kind;
 use collect::collect;
-use render::{render, RenderOptions};
+use render::{RenderOptions, render};
 use tree::{allocate, build_tree};
 
 pub fn run(root: &Path, budget: f64, include_tests: bool, excludes: &[String]) -> String {

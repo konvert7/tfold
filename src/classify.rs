@@ -27,12 +27,30 @@ const DOC_EXTENSIONS: &[&str] = &[
 ];
 
 const TEST_SEGMENTS: &[&str] = &[
-    "test", "tests", "spec", "specs", "__tests__", "__test__", "e2e", "testdata",
+    "test",
+    "tests",
+    "spec",
+    "specs",
+    "__tests__",
+    "__test__",
+    "e2e",
+    "testdata",
 ];
 
 const DEPRIORITIZED: &[&str] = &[
-    "docs", "doc", "examples", "example", "samples", "demo", "fixtures", "vendor", "third_party",
-    "generated", "dist", "build", "assets",
+    "docs",
+    "doc",
+    "examples",
+    "example",
+    "samples",
+    "demo",
+    "fixtures",
+    "vendor",
+    "third_party",
+    "generated",
+    "dist",
+    "build",
+    "assets",
 ];
 
 const ENTRYPOINT_STEMS: &[&str] = &[
@@ -124,10 +142,8 @@ fn matches_test_file(name: &str) -> bool {
     {
         return true;
     }
-    matches!(
-        extension_of(name).as_str(),
-        "java" | "cs" | "kt" | "swift"
-    ) && (stem_of(name).ends_with("test") || stem_of(name).ends_with("tests"))
+    matches!(extension_of(name).as_str(), "java" | "cs" | "kt" | "swift")
+        && (stem_of(name).ends_with("test") || stem_of(name).ends_with("tests"))
 }
 
 pub fn is_deprioritized(name: &str) -> bool {

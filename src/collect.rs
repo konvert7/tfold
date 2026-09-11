@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use ignore::overrides::{Override, OverrideBuilder};
 use ignore::WalkBuilder;
+use ignore::overrides::{Override, OverrideBuilder};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Source {
@@ -123,7 +123,10 @@ mod tests {
     #[test]
     fn device_of_distinguishes_separate_filesystems() {
         let (root, temp) = (device_of(Path::new("/")), device_of(Path::new("/tmp")));
-        assert!(root.is_some() && temp.is_some(), "stat failed: {root:?} {temp:?}");
+        assert!(
+            root.is_some() && temp.is_some(),
+            "stat failed: {root:?} {temp:?}"
+        );
         if root == temp {
             eprintln!("skipped: / and /tmp share a filesystem on this machine");
             return;

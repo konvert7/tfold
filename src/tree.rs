@@ -135,11 +135,10 @@ fn roll_up_counts(nodes: &mut Vec<Node>, id: NodeId) {
 }
 
 fn score_all(nodes: &mut [Node]) {
-    for index in 0..nodes.len() {
-        if !nodes[index].is_dir {
+    for node in nodes.iter_mut() {
+        if !node.is_dir {
             continue;
         }
-        let node = &nodes[index];
         let mut score =
             4.0 / (1.0 + node.depth as f64) + 0.8 * ((1 + node.file_count) as f64).log2();
         if node.has_entrypoint {
@@ -157,7 +156,7 @@ fn score_all(nodes: &mut [Node]) {
         if node.file_count == 0 && node.test_count > 0 {
             score -= 3.0;
         }
-        nodes[index].score = score;
+        node.score = score;
     }
 }
 

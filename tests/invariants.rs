@@ -66,7 +66,10 @@ fn nested_gitignore_scopes_to_its_own_subtree() {
 
     let map = fixture.map(500.0, false);
     assert!(map.contains("main.rs"), "sibling dropped:\n{map}");
-    assert!(!map.contains("schema.rs"), "nested ignore not applied:\n{map}");
+    assert!(
+        !map.contains("schema.rs"),
+        "nested ignore not applied:\n{map}"
+    );
     assert!(
         map.contains("keep.rs"),
         "nested ignore leaked outside its subtree:\n{map}"
@@ -199,7 +202,10 @@ fn excludes_layer_on_top_of_gitignore_rather_than_replacing_it() {
 
     let map = fixture.map_excluding(500.0, false, &["notes"]);
     assert!(map.contains("README.md"), "kept file missing:\n{map}");
-    assert!(!map.contains("app.log"), "gitignore stopped applying:\n{map}");
+    assert!(
+        !map.contains("app.log"),
+        "gitignore stopped applying:\n{map}"
+    );
     assert!(!map.contains("draft.md"), "exclude not applied:\n{map}");
 }
 

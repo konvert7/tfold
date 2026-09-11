@@ -1,6 +1,6 @@
 use crate::classify::Kind;
 use crate::collect::Source;
-use crate::tree::{collapsed_summary, visible_children, Allocation, NodeId, Tree, ROOT};
+use crate::tree::{Allocation, NodeId, ROOT, Tree, collapsed_summary, visible_children};
 
 pub struct RenderOptions {
     pub kind: Kind,
@@ -10,7 +10,14 @@ pub struct RenderOptions {
 
 pub fn render(tree: &Tree, allocation: &Allocation, options: &RenderOptions) -> Vec<String> {
     let mut lines = vec![header(tree, options)];
-    append_children(tree, ROOT, "", &mut lines, allocation, options.include_tests);
+    append_children(
+        tree,
+        ROOT,
+        "",
+        &mut lines,
+        allocation,
+        options.include_tests,
+    );
     lines
 }
 
