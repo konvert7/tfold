@@ -1,13 +1,14 @@
-use crate::Since;
 use crate::classify::Kind;
 use crate::collect::Source;
-use crate::tree::{Allocation, NodeId, ROOT, Tree, dir_summary, visible_children};
+use crate::tree::{Allocation, NodeId, ROOT, Tree, dir_summary, plural, visible_children};
+use crate::{Grep, Since};
 
 pub struct RenderOptions {
     pub kind: Kind,
     pub source: Source,
     pub include_tests: bool,
     pub since: Since,
+    pub grep: Grep,
 }
 
 pub fn render(tree: &Tree, allocation: &Allocation, options: &RenderOptions) -> Vec<String> {
@@ -43,6 +44,13 @@ fn header(tree: &Tree, options: &RenderOptions) -> String {
             facts.push(format!("{} changed since {reference}", root.changed_count))
         }
         Since::Unavailable => facts.push("--since needs git, ignored".to_string()),
+    }
+    if let Grep::Found { lines, files } = options.grep {
+        facts.push(format!(
+            "{} in {}",
+            plural(lines, "matching line"),
+            plural(files, "file")
+        ));
     }
     format!("{}/  [{}]", tree.root_name, facts.join(" · "))
 }

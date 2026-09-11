@@ -1,5 +1,11 @@
 use std::collections::{HashMap, HashSet};
 
+#[derive(Default)]
+pub struct Annotations {
+    pub changed: HashSet<String>,
+    pub matches: HashMap<String, usize>,
+}
+
 use crate::classify::{is_deprioritized, is_entrypoint, is_manifest, is_test_path};
 use crate::estimate::line_tokens;
 
@@ -20,6 +26,8 @@ pub struct Node {
     pub is_test: bool,
     pub is_changed: bool,
     pub changed_count: usize,
+    pub match_lines: usize,
+    pub match_files: usize,
     pub score: f64,
 }
 
@@ -47,11 +55,13 @@ fn new_node(name: &str, depth: usize, is_dir: bool) -> Node {
         is_test: false,
         is_changed: false,
         changed_count: 0,
+        match_lines: 0,
+        match_files: 0,
         score: 0.0,
     }
 }
 
-pub fn build_tree(files: &[String], root_name: &str, changed: &HashSet<String>) -> Tree {
+pub fn build_tree(files: &[String], root_name: &str, annotations: &Annotations) -> Tree {
     let mut nodes = vec![new_node(root_name, 0, true)];
     let mut index: HashMap<String, NodeId> = HashMap::new();
     index.insert(String::new(), ROOT);
@@ -79,7 +89,8 @@ pub fn build_tree(files: &[String], root_name: &str, changed: &HashSet<String>) 
             parent = id;
         }
         nodes[parent].is_test = is_test_path(file);
-        nodes[parent].is_changed = changed.contains(file);
+        nodes[parent].is_changed = annotations.changed.contains(file);
+        nodes[parent].match_lines = annotations.matches.get(file).copied().unwrap_or(0);
     }
 
     sort_children(&mut nodes);
@@ -113,17 +124,19 @@ fn roll_up_counts(nodes: &mut Vec<Node>, id: NodeId) {
         nodes[id].file_count = usize::from(!is_test);
         nodes[id].test_count = usize::from(is_test);
         nodes[id].changed_count = usize::from(nodes[id].is_changed);
+        nodes[id].match_files = usize::from(nodes[id].match_lines > 0);
         return;
     }
     let children = nodes[id].children.clone();
     for child_id in children {
         roll_up_counts(nodes, child_id);
-        let (file_count, test_count, changed_count, child_is_dir, child_name) = {
+        let (file_count, test_count, changed_count, matched, child_is_dir, child_name) = {
             let child = &nodes[child_id];
             (
                 child.file_count,
                 child.test_count,
                 child.changed_count,
+                (child.match_lines, child.match_files),
                 child.is_dir,
                 child.name.clone(),
             )
@@ -131,6 +144,8 @@ fn roll_up_counts(nodes: &mut Vec<Node>, id: NodeId) {
         nodes[id].file_count += file_count;
         nodes[id].test_count += test_count;
         nodes[id].changed_count += changed_count;
+        nodes[id].match_lines += matched.0;
+        nodes[id].match_files += matched.1;
         if !child_is_dir {
             if is_entrypoint(&child_name) {
                 nodes[id].has_entrypoint = true;
@@ -167,6 +182,9 @@ fn score_all(nodes: &mut [Node]) {
         if node.changed_count > 0 {
             score += 1.5 * ((1 + node.changed_count) as f64).log2();
         }
+        if node.match_files > 0 {
+            score += 1.5 * ((1 + node.match_files) as f64).log2();
+        }
         node.score = score;
     }
 }
@@ -193,11 +211,14 @@ pub const CHANGED_MARK: &str = "  *";
 
 pub fn dir_summary(node: &Node, include_tests: bool) -> String {
     if !node.is_dir {
-        return if node.is_changed {
-            CHANGED_MARK.to_string()
-        } else {
-            String::new()
-        };
+        let mut marks = String::new();
+        if node.is_changed {
+            marks.push_str(CHANGED_MARK);
+        }
+        if node.match_lines > 0 {
+            marks.push_str(&format!("  ({})", node.match_lines));
+        }
+        return marks;
     }
     let mut parts: Vec<String> = Vec::new();
     if node.file_count > 0 {
@@ -212,6 +233,9 @@ pub fn dir_summary(node: &Node, include_tests: bool) -> String {
     if node.changed_count > 0 {
         parts.push(format!("{} changed", node.changed_count));
     }
+    if node.match_files > 0 {
+        parts.push(format!("{} matched", node.match_files));
+    }
     if parts.is_empty() {
         String::new()
     } else {
@@ -219,7 +243,7 @@ pub fn dir_summary(node: &Node, include_tests: bool) -> String {
     }
 }
 
-fn plural(count: usize, noun: &str) -> String {
+pub fn plural(count: usize, noun: &str) -> String {
     let suffix = if count == 1 { "" } else { "s" };
     format!("{count} {noun}{suffix}")
 }

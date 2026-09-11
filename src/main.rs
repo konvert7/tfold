@@ -27,17 +27,27 @@ struct Args {
     /// Mark and rank up what changed since a git revision
     #[arg(long, value_name = "REF")]
     since: Option<String>,
+
+    /// Count literal matches per file and spend the budget where they are
+    #[arg(long, value_name = "PATTERN", value_parser = tfold::scan::validate_pattern)]
+    grep: Option<String>,
+
+    /// Match --grep regardless of case
+    #[arg(short = 'i', long, requires = "grep")]
+    ignore_case: bool,
 }
 
 fn main() {
     let args = Args::parse();
-    match tfold::run(
-        &args.root,
-        args.budget as f64,
-        args.include_tests,
-        &args.exclude,
-        args.since.as_deref(),
-    ) {
+    let options = tfold::Options {
+        budget: args.budget as f64,
+        include_tests: args.include_tests,
+        excludes: args.exclude,
+        since: args.since,
+        grep: args.grep,
+        ignore_case: args.ignore_case,
+    };
+    match tfold::run(&args.root, &options) {
         Ok(map) => println!("{map}"),
         Err(error) => {
             eprintln!("tfold: {error}");

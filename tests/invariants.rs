@@ -25,12 +25,35 @@ impl Fixture {
     }
 
     fn map_excluding(&self, budget: f64, include_tests: bool, excludes: &[&str]) -> String {
-        let excludes: Vec<String> = excludes.iter().map(|glob| glob.to_string()).collect();
-        tfold::run(&self.root, budget, include_tests, &excludes, None).expect("map")
+        self.map_with(tfold::Options {
+            budget,
+            include_tests,
+            excludes: excludes.iter().map(|glob| glob.to_string()).collect(),
+            ..Default::default()
+        })
+        .expect("map")
+    }
+
+    fn map_with(&self, options: tfold::Options) -> Result<String, String> {
+        tfold::run(&self.root, &options)
     }
 
     fn map_since(&self, reference: &str) -> Result<String, String> {
-        tfold::run(&self.root, 500.0, false, &[], Some(reference))
+        self.map_with(tfold::Options {
+            budget: 500.0,
+            since: Some(reference.to_string()),
+            ..Default::default()
+        })
+    }
+
+    fn map_grep(&self, pattern: &str, ignore_case: bool) -> String {
+        self.map_with(tfold::Options {
+            budget: 500.0,
+            grep: Some(pattern.to_string()),
+            ignore_case,
+            ..Default::default()
+        })
+        .expect("grep map")
     }
 
     fn git(&self, args: &[&str]) -> &Self {
@@ -120,7 +143,14 @@ fn a_subdirectory_still_honours_its_parents_gitignore() {
         .file("src/main.rs", "")
         .file("src/generated/schema.rs", "");
 
-    let map = tfold::run(&fixture.root.join("src"), 500.0, false, &[], None).expect("map");
+    let map = tfold::run(
+        &fixture.root.join("src"),
+        &tfold::Options {
+            budget: 500.0,
+            ..Default::default()
+        },
+    )
+    .expect("map");
     assert!(map.contains("main.rs"), "sibling dropped:\n{map}");
     assert!(
         !map.contains("schema.rs"),
@@ -374,13 +404,24 @@ fn since_ranks_a_changed_subtree_above_a_larger_untouched_one() {
     fixture.file("quiet/unit00.rs", "changed\n");
 
     let budget = 300.0;
-    let plain = tfold::run(&fixture.root, budget, false, &[], None).expect("plain map");
+    let plain = fixture
+        .map_with(tfold::Options {
+            budget,
+            ..Default::default()
+        })
+        .expect("plain map");
     assert!(
         plain.contains("file00.rs") && !plain.contains("unit00.rs"),
         "the budget must fit exactly one subtree, and bulk/ must win it without --since:\n{plain}"
     );
 
-    let map = tfold::run(&fixture.root, budget, false, &[], Some("main")).expect("since map");
+    let map = fixture
+        .map_with(tfold::Options {
+            budget,
+            since: Some("main".to_string()),
+            ..Default::default()
+        })
+        .expect("since map");
     assert!(
         map.contains("unit00.rs") && !map.contains("file00.rs"),
         "--since did not move the budget to the changed subtree:\n{map}"
@@ -414,5 +455,173 @@ fn a_changed_file_is_marked_where_it_sits() {
     assert!(
         !stable.trim_end().ends_with('*'),
         "unchanged file was marked: {stable}"
+    );
+}
+
+#[test]
+fn grep_counts_matching_lines_and_reports_them_at_every_level() {
+    let fixture = Fixture::new("grep-counts");
+    fixture
+        .file("src/hit.rs", "needle\nplain\nneedle needle\n")
+        .file("src/miss.rs", "nothing here\n");
+
+    let map = fixture.map_grep("needle", false);
+    assert!(
+        map.contains("2 matching lines in 1 file"),
+        "header did not report the scan:\n{map}"
+    );
+    let directory = map
+        .lines()
+        .find(|line| line.contains("src/"))
+        .expect("src missing");
+    assert!(
+        directory.contains("1 matched"),
+        "directory did not report its matched files: {directory}"
+    );
+    let hit = map
+        .lines()
+        .find(|line| line.contains("hit.rs"))
+        .expect("hit.rs missing");
+    assert!(
+        hit.contains("(2)"),
+        "the third line holds two occurrences and must count once, so hit.rs is 2: {hit}"
+    );
+    let miss = map
+        .lines()
+        .find(|line| line.contains("miss.rs"))
+        .expect("miss.rs missing");
+    assert!(!miss.contains('('), "unmatched file was annotated: {miss}");
+}
+
+#[test]
+fn grep_is_case_sensitive_until_ignore_case_is_asked_for() {
+    let fixture = Fixture::new("grep-case");
+    fixture.file("src/main.rs", "Needle\n");
+
+    assert!(
+        fixture
+            .map_grep("needle", false)
+            .contains("0 matching lines"),
+        "case-sensitive search matched a different casing"
+    );
+    assert!(
+        fixture.map_grep("needle", true).contains("1 matching line"),
+        "-i did not match a different casing"
+    );
+}
+
+#[test]
+fn grep_moves_the_budget_to_the_matching_subtree() {
+    let fixture = Fixture::new("grep-ranks");
+    for index in 0..30 {
+        fixture.file(&format!("bulk/file{index:02}.rs",), "nothing\n");
+    }
+    for index in 0..25 {
+        fixture.file(&format!("quiet/unit{index:02}.rs"), "nothing\n");
+    }
+    fixture.file("quiet/unit00.rs", "needle\n");
+
+    let budget = 300.0;
+    let plain = fixture
+        .map_with(tfold::Options {
+            budget,
+            ..Default::default()
+        })
+        .expect("plain map");
+    assert!(
+        plain.contains("file00.rs") && !plain.contains("unit00.rs"),
+        "bulk/ must win the budget without --grep, or this proves nothing:\n{plain}"
+    );
+
+    let map = fixture
+        .map_with(tfold::Options {
+            budget,
+            grep: Some("needle".to_string()),
+            ..Default::default()
+        })
+        .expect("grep map");
+    assert!(
+        map.contains("unit00.rs") && !map.contains("file00.rs"),
+        "--grep did not move the budget to the matching subtree:\n{map}"
+    );
+}
+
+#[test]
+fn grep_needs_no_git_repository() {
+    let fixture = Fixture::new("grep-nogit");
+    fixture.file("notes/a.md", "needle\n");
+
+    let map = fixture.map_grep("needle", false);
+    assert!(
+        !fixture.root.join(".git").exists(),
+        "fixture must have no .git for this test to mean anything"
+    );
+    assert!(
+        map.contains("1 matching line in 1 file") && map.contains("walk"),
+        "--grep did not work outside a repository:\n{map}"
+    );
+}
+
+#[test]
+fn grep_with_no_matches_still_produces_the_map() {
+    let fixture = Fixture::new("grep-empty");
+    fixture.file("src/main.rs", "nothing\n");
+
+    let map = fixture.map_grep("absent", false);
+    assert!(
+        map.contains("0 matching lines in 0 files") && map.contains("main.rs"),
+        "a fruitless search should still map the tree:\n{map}"
+    );
+}
+
+#[test]
+fn a_binary_file_is_never_scanned() {
+    let fixture = Fixture::new("grep-binary");
+    fixture.file("data/blob.bin", "needle\u{0}needle\n");
+
+    let map = fixture.map_grep("needle", false);
+    assert!(
+        map.contains("0 matching lines"),
+        "a NUL-bearing file was scanned:\n{map}"
+    );
+}
+
+#[test]
+fn the_default_map_never_looks_inside_a_file() {
+    let fixture = Fixture::new("grep-off");
+    fixture.file("src/main.rs", "needle\n");
+
+    let map = fixture.map(500.0, false);
+    assert!(
+        !map.contains("matching") && !map.contains("(1)"),
+        "the default map reported something only a scan could know:\n{map}"
+    );
+}
+
+#[test]
+fn grep_and_since_compose_on_the_same_file() {
+    let fixture = Fixture::new("grep-since");
+    fixture
+        .file("src/both.rs", "nothing\n")
+        .git(&["init", "-q", "-b", "main"])
+        .git(&["add", "-A"])
+        .git(&["commit", "-qm", "init"]);
+    fixture.file("src/both.rs", "needle\n");
+
+    let map = fixture
+        .map_with(tfold::Options {
+            budget: 500.0,
+            since: Some("main".to_string()),
+            grep: Some("needle".to_string()),
+            ..Default::default()
+        })
+        .expect("combined map");
+    let line = map
+        .lines()
+        .find(|line| line.contains("both.rs"))
+        .expect("both.rs missing");
+    assert!(
+        line.contains('*') && line.contains("(1)"),
+        "the two marks did not compose: {line}"
     );
 }

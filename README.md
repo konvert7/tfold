@@ -152,6 +152,8 @@ omission. `test/  (160 tests hidden)` cannot mislead anyone.
 | `--include-tests` | off | Show test files instead of collapsing them to a count. |
 | `--exclude <glob>` | none | Drop paths matching a glob. Repeatable. |
 | `--since <ref>` | none | Mark what changed since a git revision and spend the budget there. |
+| `--grep <pattern>` | none | Count literal matches per file and spend the budget where they are. |
+| `-i`, `--ignore-case` | off | Match `--grep` regardless of case. |
 
 Tests are excluded by default and always counted in the header, so you can see that they exist
 without paying for their names.
@@ -228,6 +230,47 @@ a bad guess costs relevance, not accuracy. Shallow beats deep, more files beats 
 point (`index`, `main`, `mod`, `lib`, `cli`) or a manifest (`package.json`, `Cargo.toml`, `go.mod`)
 earns a bonus, and dotfile directories, `vendor`, `dist` and `examples` are pushed down.
 
+## Finding where something lives
+
+`grep -rn` answers the question at the wrong resolution. On a 700 file repository, `grep -rn prisma`
+is 1,427 lines of output; `grep -rl` is 185 unordered paths. Neither tells you that it is
+concentrated in one directory.
+
+`--grep` counts literal matches per file and spends the budget where they are. Directories report
+how many of their files matched, files report their matching line count.
+
+```
+$ tfold src --grep prisma
+
+src/  [code · git · 464 files · 403 matching lines in 69 files]
+├── app/  (98 files, 1 matched)
+├── components/  (169 files, 3 matched)
+├── emails/  (5 files)
+├── hooks/  (7 files)
+├── lib/  (176 files, 63 matched)
+│   ├── actions/  (14 files, 7 matched)
+│   ├── audience/  (7 files, 1 matched)
+...
+```
+
+Then drill, the same as always:
+
+```
+$ tfold src/lib/dao --grep prisma --budget 300
+
+dao/  [code · git · 20 files · 156 matching lines in 20 files]
+├── credentials/  (5 files, 5 matched)
+│   ├── facebook.ts  (5)
+│   └── x.ts  (5)
+├── invitations.ts  (16)
+└── posts.ts  (41)
+```
+
+A line holding the pattern twice counts once, so the number is matching lines, not occurrences.
+Files over 2 MB and files with a NUL byte in the first 8 KB are skipped rather than scanned, which
+is the same binary test `git` uses. Add `-i` to ignore case. It needs no git repository, unlike
+`--since`, and the two compose: a file that changed *and* matches reads `db.ts  *  (24)`.
+
 ## Directories without git
 
 `tfold` works on any directory: a documentation folder, a synced drive, an extracted archive.
@@ -253,6 +296,7 @@ that only has to be close enough to allocate against. Re-fit it if you change th
 
 6 ms on the 460 file repository above, measured over 20 runs. Comparable tools that build a
 symbol or call graph take 4 to 6 seconds on the same repository, because they parse every file.
-`tfold` reads no file contents at all.
+`tfold` reads no file contents unless you ask it to with `--grep`, and that scan is a literal
+substring search across threads, not a parse.
 
 
