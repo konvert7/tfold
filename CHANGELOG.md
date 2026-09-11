@@ -1,3 +1,11 @@
+# [0.3.0](https://github.com/konvert7/tfold/compare/v0.2.1...v0.3.0) (2026-09-11)
+
+
+### Features
+
+* add grep functionality to count matches in files and enhance output ([178b8f1](https://github.com/konvert7/tfold/commit/178b8f15964db930f96410d0037ee6bb2dbc675e))
+* add option to show hierarchic changes since a given commit ([21ac9a8](https://github.com/konvert7/tfold/commit/21ac9a8106a20054e857a5d74614235f5f3306a3))
+
 ## [0.2.1](https://github.com/konvert7/tfold/compare/v0.2.0...v0.2.1) (2026-09-11)
 
 
