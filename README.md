@@ -149,9 +149,20 @@ omission. `test/  (160 tests hidden)` cannot mislead anyone.
 | --- | --- | --- |
 | `--budget <n>` | `800` | Token budget for the output. |
 | `--include-tests` | off | Show test files instead of collapsing them to a count. |
+| `--exclude <glob>` | none | Drop paths matching a glob. Repeatable. |
 
 Tests are excluded by default and always counted in the header, so you can see that they exist
 without paying for their names.
+
+`--exclude` layers on top of the ignore rules rather than replacing them, so a subtree that
+`git` already hides stays hidden:
+
+```bash
+tfold . --exclude 'docs/**' --exclude vendor
+```
+
+An unparseable glob is rejected before any work happens, so a typo costs you an error rather
+than a map that silently excludes nothing.
 
 ## What it expands first
 

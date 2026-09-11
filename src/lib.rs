@@ -11,14 +11,14 @@ use collect::collect;
 use render::{render, RenderOptions};
 use tree::{allocate, build_tree};
 
-pub fn run(root: &Path, budget: f64, include_tests: bool) -> String {
+pub fn run(root: &Path, budget: f64, include_tests: bool, excludes: &[String]) -> String {
     let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
     let root_name = root
         .file_name()
         .map(|name| name.to_string_lossy().to_string())
         .unwrap_or_else(|| root.to_string_lossy().to_string());
 
-    let (files, source) = collect(&root);
+    let (files, source) = collect(&root, excludes);
     if files.is_empty() {
         return format!("{root_name}/  [empty]");
     }

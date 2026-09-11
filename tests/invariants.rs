@@ -21,7 +21,12 @@ impl Fixture {
     }
 
     fn map(&self, budget: f64, include_tests: bool) -> String {
-        tfold::run(&self.root, budget, include_tests)
+        self.map_excluding(budget, include_tests, &[])
+    }
+
+    fn map_excluding(&self, budget: f64, include_tests: bool, excludes: &[&str]) -> String {
+        let excludes: Vec<String> = excludes.iter().map(|glob| glob.to_string()).collect();
+        tfold::run(&self.root, budget, include_tests, &excludes)
     }
 }
 
@@ -89,7 +94,7 @@ fn a_subdirectory_still_honours_its_parents_gitignore() {
         .file("src/main.rs", "")
         .file("src/generated/schema.rs", "");
 
-    let map = tfold::run(&fixture.root.join("src"), 500.0, false);
+    let map = tfold::run(&fixture.root.join("src"), 500.0, false, &[]);
     assert!(map.contains("main.rs"), "sibling dropped:\n{map}");
     assert!(
         !map.contains("schema.rs"),
@@ -165,4 +170,47 @@ fn output_stays_within_the_requested_budget() {
             "budget {budget} exceeded: claimed {claimed}\n{map}"
         );
     }
+}
+
+#[test]
+fn an_exclude_glob_removes_matching_paths_and_keeps_the_rest() {
+    let fixture = Fixture::new("exclude-glob");
+    fixture
+        .file("src/main.rs", "")
+        .file("docs/guide.md", "")
+        .file("docs/api.md", "")
+        .file("vendor/lib.rs", "");
+
+    let map = fixture.map_excluding(500.0, false, &["docs/**", "vendor"]);
+    assert!(map.contains("src/"), "kept directory missing:\n{map}");
+    assert!(!map.contains("guide.md"), "docs/** not excluded:\n{map}");
+    assert!(!map.contains("api.md"), "docs/** not excluded:\n{map}");
+    assert!(!map.contains("vendor"), "vendor not excluded:\n{map}");
+}
+
+#[test]
+fn excludes_layer_on_top_of_gitignore_rather_than_replacing_it() {
+    let fixture = Fixture::new("exclude-with-gitignore");
+    fixture
+        .file(".gitignore", "*.log\n")
+        .file("README.md", "")
+        .file("app.log", "")
+        .file("notes/draft.md", "");
+
+    let map = fixture.map_excluding(500.0, false, &["notes"]);
+    assert!(map.contains("README.md"), "kept file missing:\n{map}");
+    assert!(!map.contains("app.log"), "gitignore stopped applying:\n{map}");
+    assert!(!map.contains("draft.md"), "exclude not applied:\n{map}");
+}
+
+#[test]
+fn no_exclude_leaves_the_map_untouched() {
+    let fixture = Fixture::new("exclude-none");
+    fixture.file("src/main.rs", "").file("docs/guide.md", "");
+
+    assert_eq!(
+        fixture.map(500.0, false),
+        fixture.map_excluding(500.0, false, &[]),
+        "passing an empty exclude list changed the output"
+    );
 }

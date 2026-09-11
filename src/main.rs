@@ -19,12 +19,21 @@ struct Args {
     /// Include test files instead of collapsing them to a count
     #[arg(long)]
     include_tests: bool,
+
+    /// Exclude paths matching a glob, repeatable
+    #[arg(long, value_name = "GLOB", value_parser = tfold::collect::validate_exclude)]
+    exclude: Vec<String>,
 }
 
 fn main() {
     let args = Args::parse();
     println!(
         "{}",
-        tfold::run(&args.root, args.budget as f64, args.include_tests)
+        tfold::run(
+            &args.root,
+            args.budget as f64,
+            args.include_tests,
+            &args.exclude
+        )
     );
 }

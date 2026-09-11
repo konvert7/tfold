@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use ignore::overrides::{Override, OverrideBuilder};
 use ignore::WalkBuilder;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -39,7 +40,21 @@ const NEVER_INTERESTING: &[&str] = &[
     ".idea",
 ];
 
-pub fn collect(root: &Path) -> (Vec<String>, Source) {
+pub fn validate_exclude(glob: &str) -> Result<String, String> {
+    exclusions(Path::new("."), std::slice::from_ref(&glob.to_string()))
+        .map(|_| glob.to_string())
+        .map_err(|error| error.to_string())
+}
+
+fn exclusions(root: &Path, excludes: &[String]) -> Result<Override, ignore::Error> {
+    let mut builder = OverrideBuilder::new(root);
+    for glob in excludes {
+        builder.add(&format!("!{glob}"))?;
+    }
+    builder.build()
+}
+
+pub fn collect(root: &Path, excludes: &[String]) -> (Vec<String>, Source) {
     let source = if is_inside_git_work_tree(root) {
         Source::Git
     } else {
@@ -54,6 +69,7 @@ pub fn collect(root: &Path) -> (Vec<String>, Source) {
         .git_exclude(true)
         .require_git(false)
         .parents(true)
+        .overrides(exclusions(root, excludes).unwrap_or_else(|_| Override::empty()))
         .filter_entry(move |entry| !is_skipped_dir(entry, trust_ignore_files))
         .build();
 
