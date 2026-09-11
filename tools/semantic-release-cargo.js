@@ -26,7 +26,7 @@ function stampVersion(manifest, version) {
 }
 
 function refreshLockfile(cwd, spawn) {
-  const result = spawn("cargo", ["update", "--workspace", "--offline"], {
+  const result = spawn("cargo", ["update", "--workspace"], {
     cwd,
     encoding: "utf-8",
     stdio: ["ignore", "ignore", "pipe"],
