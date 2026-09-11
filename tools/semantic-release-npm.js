@@ -1,6 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { NATIVE_PACKAGES, assertManifestsMatchShimTable } from "../npm/native-packages.mjs";
+import {
+  assertManifestsMatchShimTable,
+  NATIVE_PACKAGES,
+} from "../npm/native-packages.mjs";
 
 export async function verifyConditions() {
   assertManifestsMatchShimTable();
@@ -14,15 +17,20 @@ export async function prepare(pluginConfig = {}, context) {
     "node",
     [
       "npm/prepare-release.mjs",
-      "--version", versionOf(context),
-      "--binaries", binariesDir(cwd),
-      "--out", releaseDir(cwd),
+      "--version",
+      versionOf(context),
+      "--binaries",
+      binariesDir(cwd),
+      "--out",
+      releaseDir(cwd),
     ],
     { cwd, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }
   );
 
   if ((result.status ?? -1) !== 0) {
-    throw new Error(`prepare-release failed with exit code ${result.status ?? -1}\n${result.stderr ?? ""}`);
+    throw new Error(
+      `prepare-release failed with exit code ${result.status ?? -1}\n${result.stderr ?? ""}`
+    );
   }
   context.logger?.log(result.stdout?.trim());
 }
@@ -37,7 +45,12 @@ export async function publish(pluginConfig = {}, context) {
   }
 
   for (const key of Object.keys(NATIVE_PACKAGES)) {
-    publishPackage(spawn, join(releaseDir(cwd), "native", key), NATIVE_PACKAGES[key].packageName, context);
+    publishPackage(
+      spawn,
+      join(releaseDir(cwd), "native", key),
+      NATIVE_PACKAGES[key].packageName,
+      context
+    );
   }
   publishPackage(spawn, join(releaseDir(cwd), "tfold"), "tfold", context);
 }
@@ -54,10 +67,14 @@ function publishPackage(spawn, dir, packageName, context) {
   if ((result.status ?? -1) === 0) return;
 
   if (isUnconfiguredTrustedPublisher(result)) {
-    context.logger?.log(`Skipping ${packageName}: no trusted publisher configured for it yet`);
+    context.logger?.log(
+      `Skipping ${packageName}: no trusted publisher configured for it yet`
+    );
     return;
   }
-  throw new Error(`${packageName} npm publish failed with exit code ${result.status ?? -1}`);
+  throw new Error(
+    `${packageName} npm publish failed with exit code ${result.status ?? -1}`
+  );
 }
 
 function isUnconfiguredTrustedPublisher(result) {

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, copyFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { NATIVE_PACKAGES } from "../npm/native-packages.mjs";
 
@@ -17,7 +17,9 @@ export async function prepare(pluginConfig = {}, context) {
   }
   writeChecksums(spawn, archives, version);
 
-  context.logger?.log(`Packed ${readdirSync(archives).length} release artifacts for ${version}`);
+  context.logger?.log(
+    `Packed ${readdirSync(archives).length} release artifacts for ${version}`
+  );
 }
 
 function packOnePlatform(spawn, cwd, archives, version, key) {
@@ -42,7 +44,9 @@ function writeChecksums(spawn, archives, version) {
 function run(spawn, command, args, cwd) {
   const result = spawn(command, args, { cwd, encoding: "utf-8" });
   if ((result.status ?? -1) !== 0) {
-    throw new Error(`${command} failed with exit code ${result.status ?? -1}\n${result.stderr ?? ""}`);
+    throw new Error(
+      `${command} failed with exit code ${result.status ?? -1}\n${result.stderr ?? ""}`
+    );
   }
   return result;
 }

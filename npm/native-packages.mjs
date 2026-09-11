@@ -73,16 +73,24 @@ export function assertManifestsMatchShimTable() {
   for (const [key, expected] of Object.entries(NATIVE_PACKAGES)) {
     const manifest = readManifest(nativeManifestPath(key));
     if (manifest.name !== expected.packageName) {
-      fail(`${key}: manifest name ${manifest.name} does not match ${expected.packageName}`);
+      fail(
+        `${key}: manifest name ${manifest.name} does not match ${expected.packageName}`
+      );
     }
     if (!manifest.files?.includes(expected.binaryPath)) {
-      fail(`${key}: manifest files ${JSON.stringify(manifest.files)} does not ship ${expected.binaryPath}`);
+      fail(
+        `${key}: manifest files ${JSON.stringify(manifest.files)} does not ship ${expected.binaryPath}`
+      );
     }
     if (manifest.bin) {
-      fail(`${key}: a native package must declare no bin, or it shadows the shim in node_modules/.bin`);
+      fail(
+        `${key}: a native package must declare no bin, or it shadows the shim in node_modules/.bin`
+      );
     }
     if (!shim.includes(expected.packageName) || !shim.includes(expected.binaryPath)) {
-      fail(`${key}: the shim does not reference ${expected.packageName}/${expected.binaryPath}`);
+      fail(
+        `${key}: the shim does not reference ${expected.packageName}/${expected.binaryPath}`
+      );
     }
   }
 
@@ -92,6 +100,8 @@ export function assertManifestsMatchShimTable() {
     .map((entry) => entry.packageName)
     .sort();
   if (declared.join(",") !== required.join(",")) {
-    fail(`Root optionalDependencies ${declared.join(",")} do not match the native packages ${required.join(",")}`);
+    fail(
+      `Root optionalDependencies ${declared.join(",")} do not match the native packages ${required.join(",")}`
+    );
   }
 }

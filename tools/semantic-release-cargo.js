@@ -1,13 +1,15 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 
 const CRATE_NAME = "tfold";
 
 export async function verifyConditions(_, context) {
   const manifest = readManifest(cwdOf(context));
   if (crateNameOf(manifest) !== CRATE_NAME) {
-    throw new Error(`Cargo.toml declares ${crateNameOf(manifest)}, expected ${CRATE_NAME}`);
+    throw new Error(
+      `Cargo.toml declares ${crateNameOf(manifest)}, expected ${CRATE_NAME}`
+    );
   }
 }
 
@@ -32,7 +34,9 @@ function refreshLockfile(cwd, spawn) {
     stdio: ["ignore", "ignore", "pipe"],
   });
   if ((result.status ?? -1) !== 0) {
-    throw new Error(`cargo update failed with exit code ${result.status ?? -1}\n${result.stderr ?? ""}`);
+    throw new Error(
+      `cargo update failed with exit code ${result.status ?? -1}\n${result.stderr ?? ""}`
+    );
   }
 }
 

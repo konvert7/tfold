@@ -3,7 +3,9 @@ import { spawnSync } from "node:child_process";
 export async function verifyConditions(_, context) {
   if (context.options?.dryRun) return;
   if (!registryToken()) {
-    throw new Error("CARGO_REGISTRY_TOKEN is unset; crates.io trusted publishing issued no token");
+    throw new Error(
+      "CARGO_REGISTRY_TOKEN is unset; crates.io trusted publishing issued no token"
+    );
   }
 }
 

@@ -1,13 +1,21 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import {
-  NATIVE_PACKAGES,
   assertManifestsMatchShimTable,
   fail,
   hostKey,
+  NATIVE_PACKAGES,
   nativeManifestPath,
   npmRoot,
   repoRoot,
@@ -31,9 +39,13 @@ function parseArgs() {
   return {
     hostKey: host,
     nativePackage,
-    binary: resolve(valueAfter(args, "--binary") ?? join(repoRoot, "target", "release", binaryName)),
+    binary: resolve(
+      valueAfter(args, "--binary") ?? join(repoRoot, "target", "release", binaryName)
+    ),
     version: valueAfter(args, "--version") ?? "0.0.0",
-    outDir: resolve(valueAfter(args, "--out") ?? mkdtempSync(join(tmpdir(), "tfold-stage-"))),
+    outDir: resolve(
+      valueAfter(args, "--out") ?? mkdtempSync(join(tmpdir(), "tfold-stage-"))
+    ),
     keep: args.includes("--keep"),
   };
 }
@@ -46,19 +58,26 @@ function stageNativePackage(options) {
   chmodSync(binaryTarget, 0o755);
   writeJson(
     join(target, "package.json"),
-    stampedManifest(nativeManifestPath(options.hostKey), options.version, { publishable: true })
+    stampedManifest(nativeManifestPath(options.hostKey), options.version, {
+      publishable: true,
+    })
   );
 }
 
 function stageShim(options) {
   cpSync(join(npmRoot, "tfold", "bin"), join(options.outDir, "bin"), { recursive: true });
   copyFileSync(join(repoRoot, "README.md"), join(options.outDir, "README.md"));
-  writeJson(join(options.outDir, "package.json"), stampedManifest(shimManifestPath(), options.version));
+  writeJson(
+    join(options.outDir, "package.json"),
+    stampedManifest(shimManifestPath(), options.version)
+  );
 }
 
 function smoke(options) {
   const shim = join(options.outDir, "bin", "tfold.js");
-  const result = spawnSync(process.execPath, [shim, repoRoot, "--budget", "400"], { encoding: "utf-8" });
+  const result = spawnSync(process.execPath, [shim, repoRoot, "--budget", "400"], {
+    encoding: "utf-8",
+  });
 
   if (result.status !== 0) {
     fail(`Shim exited ${result.status}\n${result.stdout ?? ""}${result.stderr ?? ""}`);
@@ -77,7 +96,9 @@ function assertMissingBinaryIsExplained(options) {
   try {
     cpSync(join(options.outDir, "bin"), join(orphan, "bin"), { recursive: true });
     copyFileSync(join(options.outDir, "package.json"), join(orphan, "package.json"));
-    const result = spawnSync(process.execPath, [join(orphan, "bin", "tfold.js"), "."], { encoding: "utf-8" });
+    const result = spawnSync(process.execPath, [join(orphan, "bin", "tfold.js"), "."], {
+      encoding: "utf-8",
+    });
     if (result.status === 0) fail("Shim succeeded with no native package installed");
     if (!result.stderr.includes(options.nativePackage.packageName)) {
       fail(`Shim did not name the missing package:\n${result.stderr}`);
@@ -89,21 +110,33 @@ function assertMissingBinaryIsExplained(options) {
 }
 
 function npmRun(args, cwd) {
-  return spawnSync("npm", args, { cwd, encoding: "utf-8", shell: process.platform === "win32" });
+  return spawnSync("npm", args, {
+    cwd,
+    encoding: "utf-8",
+    shell: process.platform === "win32",
+  });
 }
 
 function pack(packageDir, destination) {
   const result = npmRun(["pack", "--pack-destination", destination], packageDir);
-  if (result.status !== 0) fail(`npm pack failed in ${packageDir}\n${result.stderr ?? ""}`);
+  if (result.status !== 0)
+    fail(`npm pack failed in ${packageDir}\n${result.stderr ?? ""}`);
   return join(destination, result.stdout.trim().split("\n").pop());
 }
 
 function assertInstalledShimIsNotShadowed(options) {
   const consumer = mkdtempSync(join(tmpdir(), "tfold-consumer-"));
   try {
-    writeJson(join(consumer, "package.json"), { name: "tfold-install-check", version: "0.0.0", private: true });
+    writeJson(join(consumer, "package.json"), {
+      name: "tfold-install-check",
+      version: "0.0.0",
+      private: true,
+    });
     const tarballs = [
-      pack(join(options.outDir, "node_modules", options.nativePackage.packageName), consumer),
+      pack(
+        join(options.outDir, "node_modules", options.nativePackage.packageName),
+        consumer
+      ),
       pack(options.outDir, consumer),
     ];
     const install = npmRun(["install", "--no-audit", "--no-fund", ...tarballs], consumer);
@@ -129,7 +162,8 @@ function assertInstalledShimIsNotShadowed(options) {
       encoding: "utf-8",
       shell: process.platform === "win32",
     });
-    if (real.status !== 0) fail(`installed shim exited ${real.status}\n${real.stderr ?? ""}`);
+    if (real.status !== 0)
+      fail(`installed shim exited ${real.status}\n${real.stderr ?? ""}`);
     return real.stdout.trim().split("\n").pop();
   } finally {
     rmSync(consumer, { recursive: true, force: true });
