@@ -1,12 +1,12 @@
-# treefold
+# tfold
 
 A repository map that fits a token budget.
 
-Point a coding agent at `treefold` instead of letting it explore. It prints the structure of a
+Point a coding agent at `tfold` instead of letting it explore. It prints the structure of a
 directory, spending its budget where the code actually is, and it never guesses what anything means.
 
 ```
-$ treefold . --budget 400
+$ tfold . --budget 400
 
 portable-agent-layer/  [code · git · 460 files · 160 tests hidden]
 ├── .agents/  (18 files)
@@ -71,27 +71,27 @@ the numbers as one repository's shape rather than a universal claim.
 Run it without installing anything:
 
 ```bash
-bunx treefold .
-npx treefold .
+bunx tfold .
+npx tfold .
 ```
 
 Add it to a project so every agent working in that repo can rely on it:
 
 ```bash
-bun add -d treefold
+bun add -d tfold
 ```
 
 Or build from source:
 
 ```bash
-cargo install treefold
+cargo install tfold
 ```
 
 The npm package is a launcher, not a reimplementation. The binary ships as a
 per-platform optional dependency, so there is no build step and no `postinstall`
 download — which is what makes it work under `bunx`, where lifecycle scripts are
 blocked by default. Prebuilt for `linux-x64`, `darwin-x64`, `darwin-arm64` and
-`win32-x64`; anywhere else, use `cargo install treefold`.
+`win32-x64`; anywhere else, use `cargo install tfold`.
 
 ## Tell your agent about it
 
@@ -101,8 +101,8 @@ the structure section of your README:
 ```markdown
 ## Orienting in this repo
 
-Run `treefold .` for the structure, then `treefold <dir>` to drill into whatever
-it points at. Do not use `ls` or `find` to map the repo — treefold is faster and
+Run `tfold .` for the structure, then `tfold <dir>` to drill into whatever
+it points at. Do not use `ls` or `find` to map the repo — tfold is faster and
 applies the repo's ignore rules.
 ```
 
@@ -114,15 +114,15 @@ one call and falls back to habit.
 Start wide, then drill into whatever the first call points at:
 
 ```bash
-treefold .            # 789 tokens, 6 ms
-treefold src/hooks    # 534 tokens, 2 ms
+tfold .            # 789 tokens, 6 ms
+tfold src/hooks    # 534 tokens, 2 ms
 ```
 
 Two calls, 1,323 tokens, 8 ms. That replaces the `ls`, `find` and `cat` loop an agent otherwise
 runs to answer the same question.
 
-Any subdirectory works as a root. Pointed inside a git repository, `treefold` still applies the
-repository's ignore rules, so `treefold src` hides what `git` hides.
+Any subdirectory works as a root. Pointed inside a git repository, `tfold` still applies the
+repository's ignore rules, so `tfold src` hides what `git` hides.
 
 ## Why not `tree -L 2`
 
@@ -130,12 +130,12 @@ Depth is the wrong knob. On that repository, depth 2 costs 1,537 tokens and spen
 them printing 150 individual test filenames, because `test/` is flat. The directory that matters,
 `src/`, is four levels deep and shows up as four bare names.
 
-`treefold` takes a budget instead and decides depth per subtree. Flat directories collapse to a
+`tfold` takes a budget instead and decides depth per subtree. Flat directories collapse to a
 count. Deep ones get walked.
 
 ## It does not guess
 
-Every line is a fact about the filesystem. `treefold` never labels a directory with what it thinks
+Every line is a fact about the filesystem. `tfold` never labels a directory with what it thinks
 the code does, because that is where similar tools go wrong: a directory called `hooks` is not
 necessarily React, and a confident wrong label costs more than no label.
 
@@ -162,7 +162,7 @@ earns a bonus, and dotfile directories, `vendor`, `dist` and `examples` are push
 
 ## Directories without git
 
-`treefold` works on any directory: a documentation folder, a synced drive, an extracted archive.
+`tfold` works on any directory: a documentation folder, a synced drive, an extracted archive.
 It reads `.gitignore` files wherever it finds them, including nested ones, with or without a `.git`
 directory present. The header says which mode it used, `git` or `walk`.
 
@@ -185,4 +185,4 @@ that only has to be close enough to allocate against. Re-fit it if you change th
 
 6 ms on the 460 file repository above, measured over 20 runs. Comparable tools that build a
 symbol or call graph take 4 to 6 seconds on the same repository, because they parse every file.
-`treefold` reads no file contents at all.
+`tfold` reads no file contents at all.

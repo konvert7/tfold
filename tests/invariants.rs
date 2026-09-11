@@ -7,7 +7,7 @@ struct Fixture {
 
 impl Fixture {
     fn new(name: &str) -> Self {
-        let root = std::env::temp_dir().join(format!("treefold-{name}-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("tfold-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(&root).expect("create fixture root");
         Fixture { root }
@@ -21,7 +21,7 @@ impl Fixture {
     }
 
     fn map(&self, budget: f64, include_tests: bool) -> String {
-        treefold::run(&self.root, budget, include_tests)
+        tfold::run(&self.root, budget, include_tests)
     }
 }
 
@@ -89,7 +89,7 @@ fn a_subdirectory_still_honours_its_parents_gitignore() {
         .file("src/main.rs", "")
         .file("src/generated/schema.rs", "");
 
-    let map = treefold::run(&fixture.root.join("src"), 500.0, false);
+    let map = tfold::run(&fixture.root.join("src"), 500.0, false);
     assert!(map.contains("main.rs"), "sibling dropped:\n{map}");
     assert!(
         !map.contains("schema.rs"),

@@ -7,23 +7,23 @@ export const repoRoot = join(npmRoot, "..");
 
 export const NATIVE_PACKAGES = {
   "darwin-arm64": {
-    packageName: "@konvert7/treefold-darwin-arm64",
-    binaryPath: "bin/treefold",
+    packageName: "@konvert7/tfold-darwin-arm64",
+    binaryPath: "bin/tfold",
     rustTarget: "aarch64-apple-darwin",
   },
   "darwin-x64": {
-    packageName: "@konvert7/treefold-darwin-x64",
-    binaryPath: "bin/treefold",
+    packageName: "@konvert7/tfold-darwin-x64",
+    binaryPath: "bin/tfold",
     rustTarget: "x86_64-apple-darwin",
   },
   "linux-x64": {
-    packageName: "@konvert7/treefold-linux-x64",
-    binaryPath: "bin/treefold",
+    packageName: "@konvert7/tfold-linux-x64",
+    binaryPath: "bin/tfold",
     rustTarget: "x86_64-unknown-linux-gnu",
   },
   "win32-x64": {
-    packageName: "@konvert7/treefold-win32-x64",
-    binaryPath: "bin/treefold.exe",
+    packageName: "@konvert7/tfold-win32-x64",
+    binaryPath: "bin/tfold.exe",
     rustTarget: "x86_64-pc-windows-msvc",
   },
 };
@@ -42,7 +42,7 @@ export function nativeManifestPath(key) {
 }
 
 export function shimManifestPath() {
-  return join(npmRoot, "treefold", "package.json");
+  return join(npmRoot, "tfold", "package.json");
 }
 
 export function readManifest(path) {
@@ -69,7 +69,7 @@ export function stampedManifest(path, version, { publishable = false } = {}) {
 }
 
 export function assertManifestsMatchShimTable() {
-  const shim = readFileSync(join(npmRoot, "treefold", "bin", "treefold.js"), "utf-8");
+  const shim = readFileSync(join(npmRoot, "tfold", "bin", "tfold.js"), "utf-8");
   for (const [key, expected] of Object.entries(NATIVE_PACKAGES)) {
     const manifest = readManifest(nativeManifestPath(key));
     if (manifest.name !== expected.packageName) {

@@ -122,7 +122,7 @@ mod tests {
     fn a_repo_root_is_recognised_as_a_work_tree() {
         assert!(
             is_inside_git_work_tree(Path::new(env!("CARGO_MANIFEST_DIR"))),
-            "treefold's own checkout should be detected as a git work tree"
+            "tfold's own checkout should be detected as a git work tree"
         );
     }
 }

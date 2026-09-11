@@ -27,13 +27,13 @@ function parseArgs() {
   const nativePackage = NATIVE_PACKAGES[host];
   if (!nativePackage) fail(`No native package defined for ${host}`);
 
-  const binaryName = process.platform === "win32" ? "treefold.exe" : "treefold";
+  const binaryName = process.platform === "win32" ? "tfold.exe" : "tfold";
   return {
     hostKey: host,
     nativePackage,
     binary: resolve(valueAfter(args, "--binary") ?? join(repoRoot, "target", "release", binaryName)),
     version: valueAfter(args, "--version") ?? "0.0.0",
-    outDir: resolve(valueAfter(args, "--out") ?? mkdtempSync(join(tmpdir(), "treefold-stage-"))),
+    outDir: resolve(valueAfter(args, "--out") ?? mkdtempSync(join(tmpdir(), "tfold-stage-"))),
     keep: args.includes("--keep"),
   };
 }
@@ -51,13 +51,13 @@ function stageNativePackage(options) {
 }
 
 function stageShim(options) {
-  cpSync(join(npmRoot, "treefold", "bin"), join(options.outDir, "bin"), { recursive: true });
+  cpSync(join(npmRoot, "tfold", "bin"), join(options.outDir, "bin"), { recursive: true });
   copyFileSync(join(repoRoot, "README.md"), join(options.outDir, "README.md"));
   writeJson(join(options.outDir, "package.json"), stampedManifest(shimManifestPath(), options.version));
 }
 
 function smoke(options) {
-  const shim = join(options.outDir, "bin", "treefold.js");
+  const shim = join(options.outDir, "bin", "tfold.js");
   const result = spawnSync(process.execPath, [shim, repoRoot, "--budget", "400"], { encoding: "utf-8" });
 
   if (result.status !== 0) {
@@ -67,17 +67,17 @@ function smoke(options) {
     fail(`Shim output has no token footer:\n${result.stdout}`);
   }
   if (!result.stdout.includes("src/")) {
-    fail(`Shim output does not look like a treefold map:\n${result.stdout}`);
+    fail(`Shim output does not look like a tfold map:\n${result.stdout}`);
   }
   return result.stdout;
 }
 
 function assertMissingBinaryIsExplained(options) {
-  const orphan = mkdtempSync(join(tmpdir(), "treefold-orphan-"));
+  const orphan = mkdtempSync(join(tmpdir(), "tfold-orphan-"));
   try {
     cpSync(join(options.outDir, "bin"), join(orphan, "bin"), { recursive: true });
     copyFileSync(join(options.outDir, "package.json"), join(orphan, "package.json"));
-    const result = spawnSync(process.execPath, [join(orphan, "bin", "treefold.js"), "."], { encoding: "utf-8" });
+    const result = spawnSync(process.execPath, [join(orphan, "bin", "tfold.js"), "."], { encoding: "utf-8" });
     if (result.status === 0) fail("Shim succeeded with no native package installed");
     if (!result.stderr.includes(options.nativePackage.packageName)) {
       fail(`Shim did not name the missing package:\n${result.stderr}`);
@@ -99,9 +99,9 @@ function pack(packageDir, destination) {
 }
 
 function assertInstalledShimIsNotShadowed(options) {
-  const consumer = mkdtempSync(join(tmpdir(), "treefold-consumer-"));
+  const consumer = mkdtempSync(join(tmpdir(), "tfold-consumer-"));
   try {
-    writeJson(join(consumer, "package.json"), { name: "treefold-install-check", version: "0.0.0", private: true });
+    writeJson(join(consumer, "package.json"), { name: "tfold-install-check", version: "0.0.0", private: true });
     const tarballs = [
       pack(join(options.outDir, "node_modules", options.nativePackage.packageName), consumer),
       pack(options.outDir, consumer),
@@ -109,19 +109,19 @@ function assertInstalledShimIsNotShadowed(options) {
     const install = npmRun(["install", "--no-audit", "--no-fund", ...tarballs], consumer);
     if (install.status !== 0) fail(`npm install failed\n${install.stderr ?? ""}`);
 
-    const binaryName = process.platform === "win32" ? "treefold.cmd" : "treefold";
+    const binaryName = process.platform === "win32" ? "tfold.cmd" : "tfold";
     const installed = join(consumer, "node_modules", ".bin", binaryName);
     if (!existsSync(installed)) fail(`npm install created no ${installed}`);
 
     const shadowCheck = spawnSync(installed, ["."], {
       cwd: repoRoot,
       encoding: "utf-8",
-      env: { ...process.env, TREEFOLD_BINARY: join(consumer, "definitely-not-a-binary") },
+      env: { ...process.env, TFOLD_BINARY: join(consumer, "definitely-not-a-binary") },
       shell: process.platform === "win32",
     });
     if (!shadowCheck.stderr?.includes("could not run")) {
       fail(
-        `node_modules/.bin/treefold is not the shim — a native package is shadowing it.\nstdout: ${shadowCheck.stdout}\nstderr: ${shadowCheck.stderr}`
+        `node_modules/.bin/tfold is not the shim — a native package is shadowing it.\nstdout: ${shadowCheck.stdout}\nstderr: ${shadowCheck.stderr}`
       );
     }
 

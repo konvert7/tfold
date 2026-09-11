@@ -58,14 +58,14 @@ function prepareNativePackage(options, key) {
 }
 
 function prepareShimPackage(options) {
-  const outDir = join(options.outDir, "treefold");
+  const outDir = join(options.outDir, "tfold");
   const manifest = stampedManifest(shimManifestPath(), options.version);
   if (Object.keys(manifest.optionalDependencies ?? {}).length !== Object.keys(NATIVE_PACKAGES).length) {
     fail("Shim manifest lost an optional dependency during stamping");
   }
   writeJson(join(outDir, "package.json"), manifest);
   mkdirSync(join(outDir, "bin"), { recursive: true });
-  copyFileSync(join(npmRoot, "treefold", "bin", "treefold.js"), join(outDir, "bin", "treefold.js"));
+  copyFileSync(join(npmRoot, "tfold", "bin", "tfold.js"), join(outDir, "bin", "tfold.js"));
   copyFileSync(join(repoRoot, "README.md"), join(outDir, "README.md"));
   return manifest;
 }

@@ -4,7 +4,7 @@ use clap::Parser;
 
 #[derive(Parser)]
 #[command(
-    name = "treefold",
+    name = "tfold",
     about = "A repository structure map that fits a token budget"
 )]
 struct Args {
@@ -25,6 +25,6 @@ fn main() {
     let args = Args::parse();
     println!(
         "{}",
-        treefold::run(&args.root, args.budget as f64, args.include_tests)
+        tfold::run(&args.root, args.budget as f64, args.include_tests)
     );
 }

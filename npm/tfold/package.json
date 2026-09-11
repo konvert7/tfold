@@ -1,12 +1,12 @@
 {
-  "name": "treefold",
+  "name": "tfold",
   "version": "0.0.0",
   "description": "A repository map that fits a token budget.",
   "bin": {
-    "treefold": "bin/treefold.js"
+    "tfold": "bin/tfold.js"
   },
   "files": [
-    "bin/treefold.js",
+    "bin/tfold.js",
     "README.md"
   ],
   "keywords": [
@@ -31,9 +31,9 @@
   },
   "author": "Konvert7",
   "optionalDependencies": {
-    "@konvert7/treefold-darwin-arm64": "0.0.0",
-    "@konvert7/treefold-darwin-x64": "0.0.0",
-    "@konvert7/treefold-linux-x64": "0.0.0",
-    "@konvert7/treefold-win32-x64": "0.0.0"
+    "@konvert7/tfold-darwin-arm64": "0.0.0",
+    "@konvert7/tfold-darwin-x64": "0.0.0",
+    "@konvert7/tfold-linux-x64": "0.0.0",
+    "@konvert7/tfold-win32-x64": "0.0.0"
   }
 }
