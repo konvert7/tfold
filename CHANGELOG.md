@@ -1,3 +1,10 @@
+## [0.1.3](https://github.com/konvert7/tfold/compare/v0.1.2...v0.1.3) (2026-09-11)
+
+
+### Bug Fixes
+
+* trigger release ([3b00e29](https://github.com/konvert7/tfold/commit/3b00e2907246a68d97ecc58a555793c617369299))
+
 ## [0.1.2](https://github.com/konvert7/tfold/compare/v0.1.1...v0.1.2) (2026-09-11)
 
 
