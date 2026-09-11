@@ -9,6 +9,7 @@
     "jscpd": "jscpd --no-tips",
     "knip": "knip",
     "lf": "bun .agents/scripts/check-lf.ts",
+    "lf:fix": "bun .agents/scripts/check-lf.ts --fix",
     "check": "biome check",
     "check-write": "biome check --write"
   },
