@@ -197,3 +197,5 @@ that only has to be close enough to allocate against. Re-fit it if you change th
 6 ms on the 460 file repository above, measured over 20 runs. Comparable tools that build a
 symbol or call graph take 4 to 6 seconds on the same repository, because they parse every file.
 `tfold` reads no file contents at all.
+
+
