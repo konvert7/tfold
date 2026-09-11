@@ -4,15 +4,29 @@
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "bun .agents/hooks/rust-format.ts" },
-          { "type": "command", "command": "bun .agents/hooks/rust-check.ts" },
-          { "type": "command", "command": "bun .agents/hooks/rust-clippy.ts" }
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/rust-format.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/rust-check.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/rust-clippy.ts"
+          },
+          {
+            "type": "command",
+            "command": "bun .agents/hooks/jscpd.ts"
+          }
         ]
       }
     ]
   },
   "permissions": {
     "allow": [
+      "Bash(bun run jscpd *)",
       "Bash(cargo fmt *)",
       "Bash(cargo check *)",
       "Bash(cargo clippy *)",

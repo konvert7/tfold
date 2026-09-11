@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 
-const HOOKS = ["rust-format", "rust-check", "rust-clippy"];
+const HOOKS = ["rust-format", "rust-check", "rust-clippy", "jscpd"];
 
 function runHookScript(name: string) {
   return spawnSync("bun", [`.agents/hooks/${name}.ts`, "--opencode"], {

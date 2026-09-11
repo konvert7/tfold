@@ -1,0 +1,19 @@
+{
+  "threshold": 2.5,
+  "reporters": [
+    "threshold"
+  ],
+  "absolute": false,
+  "gitignore": true,
+  "minLines": 8,
+  "minTokens": 70,
+  "format": [
+    "rust"
+  ],
+  "ignore": [
+    "node_modules/**",
+    "target/**",
+    "dist/**",
+    "tests/**"
+  ]
+}
