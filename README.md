@@ -8,62 +8,74 @@ directory, spending its budget where the code actually is, and it never guesses 
 ```
 $ tfold . --budget 400
 
-portable-agent-layer/  [code · git · 460 files · 159 tests hidden]
-├── .agents/  (18 files)
-├── .claude/  (7 files)
-├── .codex/  (1 file)
-├── .cursor/  (6 files)
-├── .github/  (3 files)
-├── .husky/  (4 files)
-├── .opencode/  (1 file)
-├── assets/  (177 files)
-├── docs/  (1 file)
-│   └── plans/  (1 file)
-├── eval/  (27 files)
-├── scripts/  (1 file)
-├── src/  (192 files)
-│   ├── cli/  (12 files)
-│   ├── hooks/  (93 files)
-│   ├── targets/  (12 files)
-│   │   ├── claude/  (2 files)
-│   │   ├── codex/  (2 files)
-│   │   ├── copilot/  (2 files)
-│   │   ├── cursor/  (2 files)
-│   │   ├── opencode/  (3 files)
-│   │   └── lib.ts
-│   └── tools/  (75 files)
-├── .gitattributes
-├── .gitignore
-├── .jscpd.json
-├── .releaserc.json
-├── .secretlintignore
-├── .secretlintrc.json
-├── AGENTS.md
-├── biome.json
-├── bun.lock
-├── bunfig.toml
-├── CHANGELOG.md
-├── CLAUDE.md
-├── commitlint.config.js
-├── components.json
-├── klint.rules.ts
-├── klint.yaml
-├── knip.json
-├── LICENSE
-├── package.json
-├── README.md
-├── stryker.config.mjs
-└── tsconfig.json
+portable-agent-layer/  [code · git · 460 files · 160 tests hidden]
+  .agents/  (18 files)
+  .claude/  (7 files)
+  .codex/  (1 file)
+  .cursor/  (6 files)
+  .github/  (3 files)
+  .husky/  (4 files)
+  .opencode/  (1 file)
+  assets/  (177 files)
+  docs/  (1 file)
+  eval/  (27 files)
+  scripts/  (1 file)
+  src/  (192 files)
+    cli/  (12 files)
+    hooks/  (93 files)
+      handlers/  (21 files)
+      lib/  (61 files)
+      CompactRecover.ts
+      LedgerCommit.ts
+      LedgerSnapshot.ts
+      LedgerUnapplied.ts
+      LoadContext.ts
+      PreCompactPersist.ts
+      RtkWrap.ts
+      SecurityValidator.ts
+      SkillGuard.ts
+      StopOrchestrator.ts
+      UserPromptOrchestrator.ts
+    targets/  (12 files)
+      claude/  (2 files)
+      codex/  (2 files)
+      copilot/  (2 files)
+      cursor/  (2 files)
+      opencode/  (3 files)
+      lib.ts
+    tools/  (75 files)
+  .gitattributes
+  .gitignore
+  .jscpd.json
+  .releaserc.json
+  .secretlintignore
+  .secretlintrc.json
+  AGENTS.md
+  biome.json
+  bun.lock
+  bunfig.toml
+  CHANGELOG.md
+  CLAUDE.md
+  commitlint.config.js
+  components.json
+  klint.rules.ts
+  klint.yaml
+  knip.json
+  LICENSE
+  package.json
+  README.md
+  stryker.config.mjs
+  tsconfig.json
 
-~399 tokens
+~397 tokens
 ```
 
 Raise the budget and the same call walks deeper into whichever subtree earns it.
 
-That example, and every measurement in this README, is
+That example, and the timings below, are
 [Portable Agent Layer](https://github.com/kovrichard/portable-agent-layer) — a 460 file
-TypeScript repository. It is the corpus the token estimator was fitted against, so treat
-the numbers as one repository's shape rather than a universal claim.
+TypeScript repository. It is one of the six repositories the token estimator was fitted
+against, so treat the numbers as one repository's shape rather than a universal claim.
 
 ## Install
 
@@ -113,11 +125,11 @@ one call and falls back to habit.
 Start wide, then drill into whatever the first call points at:
 
 ```bash
-tfold .            # 795 tokens, 6 ms
-tfold src/hooks    # 649 tokens, 2 ms
+tfold .            # 800 tokens, 6 ms
+tfold src/hooks    # 591 tokens, 2 ms
 ```
 
-Two calls, 1,444 tokens, 8 ms. That replaces the `ls`, `find` and `cat` loop an agent otherwise
+Two calls, 1,391 tokens, 8 ms. That replaces the `ls`, `find` and `cat` loop an agent otherwise
 runs to answer the same question.
 
 Any subdirectory works as a root. Pointed inside a git repository, `tfold` still applies the
@@ -132,6 +144,11 @@ them printing 150 individual test filenames, because `test/` is flat. The direct
 `tfold` takes a budget instead and decides depth per subtree. Flat directories collapse to a
 count. Deep ones get walked, and still carry the total, so `src/  (192 files)` tells you the
 weight of a subtree whether or not you can see inside it.
+
+It also draws no tree. `├── ` costs three tokens, `└── ` four, `│   ` two, and two spaces cost
+one however many you stack. Indentation already says everything the glyphs said, so the glyphs
+were 16% of a shallow map and 44% of a deep one, spent on nothing. Dropping them fits around 45%
+more of the tree into the same budget.
 
 ## It does not guess
 
@@ -177,43 +194,54 @@ into the budget ahead of larger untouched ones.
 ```
 $ tfold . --since HEAD~2 --budget 300
 
-tfold/  [code · git · 52 files · 1 tests hidden · 11 changed since HEAD~2]
-├── .agents/  (9 files)
-│   ├── hooks/  (8 files)
-│   └── scripts/  (1 file)
-│       └── check-lf.ts
-├── .claude/  (1 file)
-├── .codex/  (1 file)
-├── .cursor/  (1 file)
-├── .github/  (1 file)
-├── .husky/  (3 files)
-├── .opencode/  (1 file)
-├── npm/  (10 files, 1 changed)
-├── src/  (7 files, 5 changed)
-│   ├── classify.rs
-│   ├── collect.rs  *
-│   ├── estimate.rs
-│   ├── lib.rs  *
-│   ├── main.rs  *
-│   ├── render.rs  *
-│   └── tree.rs  *
-├── tools/  (4 files)
-├── .gitattributes
-├── .gitignore
-├── .jscpd.json
-├── .npmrc
-├── .releaserc.json
-├── biome.json
-├── bun.lock
-├── Cargo.lock  *
-├── Cargo.toml  *
-├── CHANGELOG.md  *
-├── commitlint.config.js
-├── knip.json
-├── package.json
-└── README.md  *
+tfold/  [code · git · 53 files · 1 tests hidden · 12 changed since HEAD~2]
+  .agents/  (9 files)
+    hooks/  (8 files)
+    scripts/  (1 file)
+      check-lf.ts
+  .claude/  (1 file)
+    settings.json
+  .codex/  (1 file)
+  .cursor/  (1 file)
+  .github/  (1 file)
+  .husky/  (3 files)
+  .opencode/  (1 file)
+  npm/  (10 files, 1 changed)
+    native/  (4 files)
+    tfold/  (2 files)
+      bin/  (1 file)
+        tfold.js
+      package.json
+    bootstrap-natives.mjs  *
+    native-packages.mjs
+    prepare-release.mjs
+    stage.mjs
+  src/  (8 files, 6 changed)
+    classify.rs
+    collect.rs
+    estimate.rs  *
+    lib.rs  *
+    main.rs  *
+    render.rs  *
+    scan.rs  *
+    tree.rs  *
+  tools/  (4 files)
+  .gitattributes
+  .gitignore
+  .jscpd.json
+  .npmrc
+  .releaserc.json
+  biome.json
+  bun.lock
+  Cargo.lock  *
+  Cargo.toml  *
+  CHANGELOG.md  *
+  commitlint.config.js
+  knip.json
+  package.json
+  README.md  *
 
-~294 tokens
+~296 tokens
 ```
 
 It counts uncommitted edits and untracked files too, so it answers "where am I" rather than only
@@ -243,13 +271,13 @@ how many of their files matched, files report their matching line count.
 $ tfold src --grep prisma
 
 src/  [code · git · 464 files · 403 matching lines in 69 files]
-├── app/  (98 files, 1 matched)
-├── components/  (169 files, 3 matched)
-├── emails/  (5 files)
-├── hooks/  (7 files)
-├── lib/  (176 files, 63 matched)
-│   ├── actions/  (14 files, 7 matched)
-│   ├── audience/  (7 files, 1 matched)
+  app/  (98 files, 1 matched)
+  components/  (169 files, 3 matched)
+  emails/  (5 files)
+  hooks/  (7 files)
+  lib/  (176 files, 63 matched)
+    actions/  (14 files, 7 matched)
+      credentials/  (6 files, 6 matched)
 ...
 ```
 
@@ -259,11 +287,29 @@ Then drill, the same as always:
 $ tfold src/lib/dao --grep prisma --budget 300
 
 dao/  [code · git · 20 files · 156 matching lines in 20 files]
-├── credentials/  (5 files, 5 matched)
-│   ├── facebook.ts  (5)
-│   └── x.ts  (5)
-├── invitations.ts  (16)
-└── posts.ts  (41)
+  credentials/  (5 files, 5 matched)
+    facebook.ts  (5)
+    linkedIn.ts  (5)
+    pinterest.ts  (6)
+    threads.ts  (5)
+    x.ts  (5)
+  admins.ts  (2)
+  audience.ts  (10)
+  billing.ts  (5)
+  content-performance.ts  (2)
+  disconnect-account.ts  (7)
+  invitations.ts  (16)
+  mcp.ts  (6)
+  media.ts  (8)
+  notifications.ts  (3)
+  orgs.ts  (2)
+  post-flow.ts  (4)
+  post-retry.ts  (9)
+  posts.ts  (41)
+  socials.ts  (7)
+  team.ts  (8)
+
+~166 tokens
 ```
 
 A line holding the pattern twice counts once, so the number is matching lines, not occurrences.
@@ -282,14 +328,17 @@ inference in the tool and it is reported rather than acted on silently.
 
 ## Token counting
 
-The footer estimate comes from a two constant linear model fitted against `cl100k_base`:
+The footer estimate comes from a two constant linear model:
 
 ```
-tokens_per_line = 2.82 + 0.2741 × chars
+tokens_per_line = 1.03 + 0.357 × visible chars
 ```
 
-Measured error on this tool's own output is within 2% at budgets of 800 and 2000, and about 9% over
-at 300. It is deliberately not a real BPE tokenizer: two floats beat a 1.6 MB table for a number
+Indentation is left out of the char count on purpose. A run of spaces collapses into a single
+token however deep it goes, so depth is close to free and only the label and its summary get
+billed. Fitted against `o200k_base` over 18 maps — six repositories at three budgets each — the
+estimate lands within 3% on 15 of them, 8% under at the tightest budget and 9% over on a twelve
+line map. It is deliberately not a real BPE tokenizer: two floats beat a 1.6 MB table for a number
 that only has to be close enough to allocate against. Re-fit it if you change the line format.
 
 ## Speed

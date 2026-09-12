@@ -248,12 +248,11 @@ pub fn plural(count: usize, noun: &str) -> String {
     format!("{count} {noun}{suffix}")
 }
 
-pub fn line_char_count(tree: &Tree, id: NodeId, include_tests: bool) -> usize {
+pub fn visible_char_count(tree: &Tree, id: NodeId, include_tests: bool) -> usize {
     let node = &tree.nodes[id];
-    let indent = 4 * node.depth.saturating_sub(1);
     let label_len = node.name.chars().count() + usize::from(node.is_dir);
     let summary_len = dir_summary(node, include_tests).chars().count();
-    indent + 4 + label_len + summary_len
+    label_len + summary_len
 }
 
 pub fn allocate(tree: &Tree, budget: f64, include_tests: bool) -> Allocation {
@@ -261,7 +260,7 @@ pub fn allocate(tree: &Tree, budget: f64, include_tests: bool) -> Allocation {
     let mut tokens = line_tokens(tree.root_name.chars().count() + 40);
 
     for child_id in visible_children(tree, ROOT, include_tests) {
-        tokens += line_tokens(line_char_count(tree, child_id, include_tests));
+        tokens += line_tokens(visible_char_count(tree, child_id, include_tests));
     }
     let over_budget = tokens > budget;
 
@@ -310,6 +309,6 @@ fn best_candidate(
 fn expansion_delta(tree: &Tree, children: &[NodeId], include_tests: bool) -> f64 {
     children
         .iter()
-        .map(|child_id| line_tokens(line_char_count(tree, *child_id, include_tests)))
+        .map(|child_id| line_tokens(visible_char_count(tree, *child_id, include_tests)))
         .sum()
 }

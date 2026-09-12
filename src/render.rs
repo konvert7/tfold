@@ -3,6 +3,8 @@ use crate::collect::Source;
 use crate::tree::{Allocation, NodeId, ROOT, Tree, dir_summary, plural, visible_children};
 use crate::{Grep, Since};
 
+const INDENT: &str = "  ";
+
 pub struct RenderOptions {
     pub kind: Kind,
     pub source: Source,
@@ -16,7 +18,7 @@ pub fn render(tree: &Tree, allocation: &Allocation, options: &RenderOptions) -> 
     append_children(
         tree,
         ROOT,
-        "",
+        INDENT,
         &mut lines,
         allocation,
         options.include_tests,
@@ -63,28 +65,23 @@ fn append_children(
     allocation: &Allocation,
     include_tests: bool,
 ) {
-    let children = visible_children(tree, id, include_tests);
-    let last_index = children.len().saturating_sub(1);
-
-    for (position, child_id) in children.iter().enumerate() {
-        let child = &tree.nodes[*child_id];
-        let is_last = position == last_index;
-        let expanded = allocation.expanded.contains(child_id);
+    for child_id in visible_children(tree, id, include_tests) {
+        let child = &tree.nodes[child_id];
         let label = if child.is_dir {
             format!("{}/", child.name)
         } else {
             child.name.clone()
         };
-        let summary = dir_summary(child, include_tests);
-        let branch = if is_last { "└── " } else { "├── " };
-        lines.push(format!("{prefix}{branch}{label}{summary}"));
+        lines.push(format!(
+            "{prefix}{label}{}",
+            dir_summary(child, include_tests)
+        ));
 
-        if child.is_dir && expanded {
-            let continuation = if is_last { "    " } else { "│   " };
+        if child.is_dir && allocation.expanded.contains(&child_id) {
             append_children(
                 tree,
-                *child_id,
-                &format!("{prefix}{continuation}"),
+                child_id,
+                &format!("{prefix}{INDENT}"),
                 lines,
                 allocation,
                 include_tests,

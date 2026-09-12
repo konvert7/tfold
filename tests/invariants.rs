@@ -313,7 +313,7 @@ fn the_token_footer_accounts_for_every_printed_line() {
         .expect("token footer missing");
     let printed: f64 = lines[1..lines.len() - 2]
         .iter()
-        .map(|line| tfold::estimate::line_tokens(line.chars().count()))
+        .map(|line| tfold::estimate::line_tokens(line.trim_start().chars().count()))
         .sum();
 
     assert!(
@@ -403,7 +403,7 @@ fn since_ranks_a_changed_subtree_above_a_larger_untouched_one() {
         .git(&["commit", "-qm", "init"]);
     fixture.file("quiet/unit00.rs", "changed\n");
 
-    let budget = 300.0;
+    let budget = 200.0;
     let plain = fixture
         .map_with(tfold::Options {
             budget,
@@ -521,7 +521,7 @@ fn grep_moves_the_budget_to_the_matching_subtree() {
     }
     fixture.file("quiet/unit00.rs", "needle\n");
 
-    let budget = 300.0;
+    let budget = 200.0;
     let plain = fixture
         .map_with(tfold::Options {
             budget,
@@ -623,5 +623,26 @@ fn grep_and_since_compose_on_the_same_file() {
     assert!(
         line.contains('*') && line.contains("(1)"),
         "the two marks did not compose: {line}"
+    );
+}
+
+#[test]
+fn nesting_is_plain_indentation_rather_than_tree_glyphs() {
+    let fixture = Fixture::new("indent-plain");
+    fixture.file("outer/inner/deep.rs", "");
+
+    let map = fixture.map(800.0, false);
+    assert!(
+        !map.contains('\u{251c}') && !map.contains('\u{2514}') && !map.contains('\u{2502}'),
+        "tree glyphs cost three to four tokens each and are back in the map:\n{map}"
+    );
+
+    let deep = map
+        .lines()
+        .find(|line| line.contains("deep.rs"))
+        .expect("deep.rs missing");
+    assert_eq!(
+        deep, "      deep.rs",
+        "a depth three file must carry six spaces and nothing else:\n{map}"
     );
 }
