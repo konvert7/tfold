@@ -66,9 +66,8 @@ portable-agent-layer/  [code · git · 460 files · 160 tests hidden]
   README.md
   stryker.config.mjs
   tsconfig.json
-
-~397 tokens
 ```
+
 
 Raise the budget and the same call walks deeper into whichever subtree earns it.
 
@@ -171,6 +170,7 @@ omission. `test/  (160 tests hidden)` cannot mislead anyone.
 | `--since <ref>` | none | Mark what changed since a git revision and spend the budget there. |
 | `--grep <pattern>` | none | Count literal matches per file and spend the budget where they are. |
 | `-i`, `--ignore-case` | off | Match `--grep` regardless of case. |
+| `--cost` | off | Print the token estimate and how long the map took. |
 
 Tests are excluded by default and always counted in the header, so you can see that they exist
 without paying for their names.
@@ -194,38 +194,37 @@ into the budget ahead of larger untouched ones.
 ```
 $ tfold . --since HEAD~2 --budget 300
 
-tfold/  [code · git · 53 files · 1 tests hidden · 12 changed since HEAD~2]
+tfold/  [code · git · 52 files · 1 tests hidden · 10 changed since HEAD~2]
   .agents/  (9 files)
-    hooks/  (8 files)
-    scripts/  (1 file)
-      check-lf.ts
   .claude/  (1 file)
-    settings.json
   .codex/  (1 file)
   .cursor/  (1 file)
   .github/  (1 file)
   .husky/  (3 files)
   .opencode/  (1 file)
-  npm/  (10 files, 1 changed)
+  npm/  (9 files)
     native/  (4 files)
     tfold/  (2 files)
       bin/  (1 file)
         tfold.js
       package.json
-    bootstrap-natives.mjs  *
     native-packages.mjs
     prepare-release.mjs
     stage.mjs
-  src/  (8 files, 6 changed)
+  src/  (8 files, 5 changed)
     classify.rs
     collect.rs
     estimate.rs  *
     lib.rs  *
     main.rs  *
     render.rs  *
-    scan.rs  *
+    scan.rs
     tree.rs  *
   tools/  (4 files)
+    semantic-release-archives.js
+    semantic-release-cargo.js
+    semantic-release-crates.js
+    semantic-release-npm.js
   .gitattributes
   .gitignore
   .jscpd.json
@@ -240,9 +239,8 @@ tfold/  [code · git · 53 files · 1 tests hidden · 12 changed since HEAD~2]
   knip.json
   package.json
   README.md  *
-
-~296 tokens
 ```
+
 
 It counts uncommitted edits and untracked files too, so it answers "where am I" rather than only
 "what did I commit".
@@ -270,16 +268,17 @@ how many of their files matched, files report their matching line count.
 ```
 $ tfold src --grep prisma
 
-src/  [code · git · 464 files · 403 matching lines in 69 files]
-  app/  (98 files, 1 matched)
+src/  [code · git · 466 files · 403 matching lines in 69 files]
+  app/  (103 files, 1 matched)
   components/  (169 files, 3 matched)
   emails/  (5 files)
   hooks/  (7 files)
-  lib/  (176 files, 63 matched)
+  lib/  (173 files, 63 matched)
     actions/  (14 files, 7 matched)
       credentials/  (6 files, 6 matched)
 ...
 ```
+
 
 Then drill, the same as always:
 
@@ -308,9 +307,8 @@ dao/  [code · git · 20 files · 156 matching lines in 20 files]
   posts.ts  (41)
   socials.ts  (7)
   team.ts  (8)
-
-~166 tokens
 ```
+
 
 A line holding the pattern twice counts once, so the number is matching lines, not occurrences.
 Files over 2 MB and files with a NUL byte in the first 8 KB are skipped rather than scanned, which
@@ -328,7 +326,17 @@ inference in the tool and it is reported rather than acted on silently.
 
 ## Token counting
 
-The footer estimate comes from a two constant linear model:
+The map does not tell you what it cost. An agent can do nothing with that number, and printing
+it spends the budget on a fact about the budget. Ask for it with `--cost` when you are the one
+measuring:
+
+```bash
+$ tfold . --cost | tail -1
+
+~450 tokens · 3.3 ms
+```
+
+The estimate comes from a two constant linear model:
 
 ```
 tokens_per_line = 1.03 + 0.357 × visible chars
@@ -341,7 +349,13 @@ estimate lands within 3% on 15 of them, 8% under at the tightest budget and 9% o
 line map. It is deliberately not a real BPE tokenizer: two floats beat a 1.6 MB table for a number
 that only has to be close enough to allocate against. Re-fit it if you change the line format.
 
+A map that could not fit its own top level still says `over budget: top level alone exceeds it`
+with or without `--cost`, because a truncated map that looks complete is the one thing worse than
+a number nobody asked for.
+
 ## Speed
+
+`--cost` reports it per run, so the numbers below are reproducible rather than claimed.
 
 6 ms on the 460 file repository above, measured over 20 runs. Comparable tools that build a
 symbol or call graph take 4 to 6 seconds on the same repository, because they parse every file.

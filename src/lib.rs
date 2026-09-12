@@ -7,6 +7,7 @@ pub mod tree;
 
 use std::collections::HashSet;
 use std::path::Path;
+use std::time::{Duration, Instant};
 
 use classify::classify_kind;
 use collect::{Source, changed_since, collect};
@@ -21,6 +22,7 @@ pub struct Options {
     pub since: Option<String>,
     pub grep: Option<String>,
     pub ignore_case: bool,
+    pub show_cost: bool,
 }
 
 impl Default for Options {
@@ -32,6 +34,7 @@ impl Default for Options {
             since: None,
             grep: None,
             ignore_case: false,
+            show_cost: false,
         }
     }
 }
@@ -84,7 +87,35 @@ fn grep_summary(options: &Options, matches: &Annotations) -> Grep {
     }
 }
 
+const OVER_BUDGET: &str = "over budget: top level alone exceeds it";
+
+fn milliseconds(elapsed: Duration) -> String {
+    let millis = elapsed.as_secs_f64() * 1000.0;
+    if millis < 10.0 {
+        format!("{millis:.1} ms")
+    } else {
+        format!("{} ms", millis.round())
+    }
+}
+
+fn footer(allocation: &tree::Allocation, show_cost: bool, elapsed: Duration) -> Option<String> {
+    if show_cost {
+        let overage = if allocation.over_budget {
+            format!(" ({OVER_BUDGET})")
+        } else {
+            String::new()
+        };
+        return Some(format!(
+            "~{} tokens · {}{overage}",
+            allocation.tokens.round(),
+            milliseconds(elapsed)
+        ));
+    }
+    allocation.over_budget.then(|| OVER_BUDGET.to_string())
+}
+
 pub fn run(root: &Path, options: &Options) -> Result<String, String> {
+    let started = Instant::now();
     let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
     let root_name = root
         .file_name()
@@ -114,12 +145,9 @@ pub fn run(root: &Path, options: &Options) -> Result<String, String> {
         },
     );
 
-    let overage = if allocation.over_budget {
-        " (over budget: top level alone exceeds it)"
-    } else {
-        ""
-    };
-    lines.push(String::new());
-    lines.push(format!("~{} tokens{overage}", allocation.tokens.round()));
+    if let Some(footer) = footer(&allocation, options.show_cost, started.elapsed()) {
+        lines.push(String::new());
+        lines.push(footer);
+    }
     Ok(lines.join("\n"))
 }

@@ -24,6 +24,16 @@ impl Fixture {
         self.map_excluding(budget, include_tests, &[])
     }
 
+    fn map_with_cost(&self, budget: f64, include_tests: bool) -> String {
+        self.map_with(tfold::Options {
+            budget,
+            include_tests,
+            show_cost: true,
+            ..Default::default()
+        })
+        .expect("map")
+    }
+
     fn map_excluding(&self, budget: f64, include_tests: bool, excludes: &[&str]) -> String {
         self.map_with(tfold::Options {
             budget,
@@ -214,7 +224,7 @@ fn output_stays_within_the_requested_budget() {
     }
 
     for budget in [150.0, 400.0, 900.0] {
-        let map = fixture.map(budget, false);
+        let map = fixture.map_with_cost(budget, false);
         let claimed: f64 = map
             .lines()
             .last()
@@ -304,7 +314,7 @@ fn the_token_footer_accounts_for_every_printed_line() {
         fixture.file(&format!("area{}/nested/file{index:02}.rs", index % 5), "");
     }
 
-    let map = fixture.map(900.0, false);
+    let map = fixture.map_with_cost(900.0, false);
     let lines: Vec<&str> = map.lines().collect();
     let claimed: f64 = lines
         .last()
@@ -644,5 +654,62 @@ fn nesting_is_plain_indentation_rather_than_tree_glyphs() {
     assert_eq!(
         deep, "      deep.rs",
         "a depth three file must carry six spaces and nothing else:\n{map}"
+    );
+}
+
+#[test]
+fn the_token_estimate_is_printed_only_when_it_is_asked_for() {
+    let fixture = Fixture::new("cost-opt-in");
+    for index in 0..6 {
+        fixture.file(&format!("src/file{index}.rs"), "");
+    }
+
+    let quiet = fixture.map(800.0, false);
+    assert!(
+        !quiet.contains("tokens"),
+        "the map spent the agent's budget telling it about the budget:\n{quiet}"
+    );
+    assert!(
+        quiet.lines().last().is_some_and(|line| !line.is_empty()),
+        "the map ends with the footer's blank line still attached:\n{quiet}"
+    );
+
+    let asked = fixture.map_with_cost(800.0, false);
+    let footer = asked.lines().last().expect("map is empty");
+    let (estimate, duration) = footer
+        .split_once(" · ")
+        .unwrap_or_else(|| panic!("footer is not two facts: {footer}"));
+    assert!(
+        estimate.starts_with('~') && estimate.ends_with("tokens"),
+        "--cost did not print the estimate: {footer}"
+    );
+    assert!(
+        duration
+            .strip_suffix(" ms")
+            .is_some_and(|number| number.parse::<f64>().is_ok()),
+        "--cost did not print how long the map took: {footer}"
+    );
+    assert_eq!(
+        quiet.lines().count() + 2,
+        asked.lines().count(),
+        "the two maps differ by more than the blank line and the footer"
+    );
+}
+
+#[test]
+fn an_over_budget_map_still_says_so_without_the_estimate() {
+    let fixture = Fixture::new("cost-overage");
+    for index in 0..40 {
+        fixture.file(&format!("area{index:02}/file.rs"), "");
+    }
+
+    let quiet = fixture.map(20.0, false);
+    assert!(
+        quiet.contains("over budget"),
+        "a truncated map hid the fact that it is truncated:\n{quiet}"
+    );
+    assert!(
+        !quiet.contains("tokens"),
+        "the overage notice dragged the estimate back in with it:\n{quiet}"
     );
 }

@@ -35,6 +35,10 @@ struct Args {
     /// Match --grep regardless of case
     #[arg(short = 'i', long, requires = "grep")]
     ignore_case: bool,
+
+    /// Print the token estimate and how long the map took
+    #[arg(long)]
+    cost: bool,
 }
 
 fn main() {
@@ -46,6 +50,7 @@ fn main() {
         since: args.since,
         grep: args.grep,
         ignore_case: args.ignore_case,
+        show_cost: args.cost,
     };
     match tfold::run(&args.root, &options) {
         Ok(map) => println!("{map}"),
