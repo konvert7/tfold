@@ -75,14 +75,18 @@ function stageShim(options) {
 
 function smoke(options) {
   const shim = join(options.outDir, "bin", "tfold.js");
-  const result = spawnSync(process.execPath, [shim, repoRoot, "--budget", "400"], {
-    encoding: "utf-8",
-  });
+  const result = spawnSync(
+    process.execPath,
+    [shim, repoRoot, "--budget", "400", "--cost"],
+    {
+      encoding: "utf-8",
+    }
+  );
 
   if (result.status !== 0) {
     fail(`Shim exited ${result.status}\n${result.stdout ?? ""}${result.stderr ?? ""}`);
   }
-  if (!/^~\d+ tokens$/m.test(result.stdout)) {
+  if (!/^~\d+ tokens · [\d.]+ ms$/m.test(result.stdout)) {
     fail(`Shim output has no token footer:\n${result.stdout}`);
   }
   if (!result.stdout.includes("src/")) {
