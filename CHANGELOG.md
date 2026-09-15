@@ -1,3 +1,11 @@
+## [0.3.1](https://github.com/konvert7/tfold/compare/v0.3.0...v0.3.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* remove glyphs to decrease cost ([c7c85ef](https://github.com/konvert7/tfold/commit/c7c85efe78167214c775f9db2b06d4dd611ca63b))
+* update smoke function to include cost in output validation ([c46c3b6](https://github.com/konvert7/tfold/commit/c46c3b6f310e46ec5cf99e34f5fc34fdc69c6e05))
+
 # [0.3.0](https://github.com/konvert7/tfold/compare/v0.2.1...v0.3.0) (2026-09-11)
 
 
